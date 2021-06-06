@@ -70,7 +70,7 @@ public class MyFileReader {
 		// pattern = Pattern.compile("@"); //영문자만
 		// pattern = Pattern.compile("@.+$"); //영문자만
 		pattern = Pattern.compile(
-				"(@.+:)|(@.+\\])|(@.+,)|(\\d\\d\\:\\d\\d\\:\\d\\d\\.\\d\\d\\d)|(\\d\\d\\d\\d \\d\\d\\:\\d\\d\\:\\d\\d \\w\\w)|(\\d\\w \\d\\d,)",
+				"(@.+:)|(@.+\\])|(@.+,)|(\\d\\d\\:\\d\\d\\:\\d\\d\\.\\d\\d\\d)|(\\d\\d\\d\\d \\d\\d\\:\\d\\d\\:\\d\\d \\w\\w)|(\\d\\w \\d\\d,)|(\\d\\d\\d\\d \\d\\:\\d\\d\\:\\d\\d \\w\\w)",
 				Pattern.UNICODE_CHARACTER_CLASS);
 		// pattern = Pattern.compile("(\\d\\d\\:\\d\\d\\:\\d\\d\\.\\d\\d\\d)");
 		// pattern = Pattern.compile("(\\d\\d\\d\\d \\d\\d\\:\\d\\d\\:\\d\\d
@@ -87,6 +87,8 @@ public class MyFileReader {
 				String sLine = null;
 
 				while ((sLine = inFile.readLine()) != null) {
+					if (sLine.length() > 4000)
+						continue;
 					cnt++;
 					// System.out.println(sLine); // 읽어들인 문자열을 출력 합니다.
 					// words = sLine.trim().split("\\s+");
@@ -111,13 +113,19 @@ public class MyFileReader {
 					else
 						sb.append(buff, startPoint, buff.length - startPoint);
 					// System.out.println(cnt + " : " + sb.toString());
-					pstmt.setInt(1, currentSeq + 1);
-					pstmt.setInt(2, cnt);
-					pstmt.setString(3, sb.toString());
-					pstmt.executeUpdate();
-					if (cnt % 1000 == 0) {
-						conn.commit();
-						System.out.println(cnt + " inserted.");
+					try {
+						pstmt.setInt(1, currentSeq + 1);
+						pstmt.setInt(2, cnt);
+						pstmt.setString(3, sb.toString());
+						pstmt.executeUpdate();
+
+						if (cnt % 1000 == 0) {
+							conn.commit();
+							System.out.println(cnt + " inserted.");
+						}
+					} catch (SQLException e) {
+						System.out.println(sLine);
+						e.printStackTrace();
 					}
 
 				}
@@ -132,9 +140,6 @@ public class MyFileReader {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (SQLException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
