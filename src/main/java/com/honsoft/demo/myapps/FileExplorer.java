@@ -10,33 +10,100 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 public class FileExplorer {
+	private static Logger logger = LoggerFactory.getLogger(FileExplorer.class);
 	Date startDate, endDate = null;
 	int dirCnt, fileCnt = 0;
 	Path file;
-	String url = "jdbc:oracle:thin:@localhost:1521:jerry";
-	String id = "cddba1", pw = "cn0012";
+	String mysqlUrl = "jdbc:mysql://localhost:3306/quickguide";
+	String mysqlId = "shoppingnt", mysqlPw = "Shoppingnt2021!@";
+	
+	String oracleUrl = "jdbc:oracle:thin:@localhost:1521:jerry";
+	String oracleId = "cddba1", oraclePw = "cn0012";
+	
+	String h2Url = "jdbc:h2:mem:testdb;DB_CLOSE_ON_EXIT=FALSE";
+	String h2Id = "sa", h2Pw = "";
+
+	String hsqldbUrl = "jdbc:hsqldb:file:d:\\dbfiles\\samplehsqldb;set schema public";
+	String hsqldbId = "sa", hsqldbPw = "";
+	
+	
 	Connection conn ;
 	PreparedStatement pstmt;
-	String sqlStr = "insert into files (file_name,last_mod_time,last_access_time,creation_time) values (?,?,?,?)";
-	String fileName;
+	Statement stmt;
+	
+	String oracleSqlStr = "insert into files (id, file_path, file_name, file_size, file_ext, last_mod_time,last_access_time,creation_time, runjob_time, runjob_id) values (files_seq.nextval,?,?,?,?,?,?,?,?,?)";
+	String mysqlSqlStr = "insert into files (file_path, file_name, file_size, file_ext, last_mod_time,last_access_time,creation_time, runjob_time, runjob_id) values (?,?,?,?,?,?,?,?,?)";
+	String h2SqlStr = "insert into files (file_path, file_name, file_size, file_ext, last_mod_time,last_access_time,creation_time, runjob_time, runjob_id) values (?,?,?,?,?,?,?,?,?)";
+	String hsqldbSqlStr = "insert into files (file_path, file_name, file_size, file_ext, last_mod_time,last_access_time,creation_time, runjob_time, runjob_id) values (?,?,?,?,?,?,?,?,?)";
+
+	String filePath, fileName, fileExt;
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
 	
-	public void db() {
+	public void dbOracle() {
 		   try{	            
 	        	//드라이버 로딩 (Mysql 또는 Oracle 중에 선택하시면 됩니다.)
 	            Class.forName("oracle.jdbc.driver.OracleDriver");    //oracle
-	            conn = DriverManager.getConnection(url, id, pw);
+	            conn = DriverManager.getConnection(oracleUrl, oracleId, oraclePw);
 	            
-	            pstmt = conn.prepareStatement(sqlStr);	        	
+	            pstmt = conn.prepareStatement(oracleSqlStr);	        	
 
 	        }catch (Exception e){
 	            e.printStackTrace();
 	        }
 	}
+	
+	public void dbMysql() {
+		   try{	            
+	        	//드라이버 로딩 (Mysql 또는 Oracle 중에 선택하시면 됩니다.)
+	            Class.forName("com.mysql.cj.jdbc.Driver");    //mysql
+	            conn = DriverManager.getConnection(mysqlUrl, mysqlId, mysqlPw);
+	            conn.setAutoCommit(false);
+	            
+	            pstmt = conn.prepareStatement(mysqlSqlStr);	        	
+
+	        }catch (Exception e){
+	            e.printStackTrace();
+	        }
+	}
+
+	public void dbH2() {
+		   try{	            
+	        	//드라이버 로딩 (Mysql 또는 Oracle 중에 선택하시면 됩니다.)
+	            Class.forName("org.h2.Driver");    //mysql
+	            conn = DriverManager.getConnection(h2Url, h2Id, h2Pw);
+	            conn.setAutoCommit(false);
+	            
+	            pstmt = conn.prepareStatement(h2SqlStr);	        	
+
+	        }catch (Exception e){
+	            e.printStackTrace();
+	        }
+	}
+	
+	public void dbHsqldb() {
+		   try{	            
+	        	//드라이버 로딩 (Mysql 또는 Oracle 중에 선택하시면 됩니다.)
+	            Class.forName("org.hsqldb.jdbcDriver");    //mysql
+	            conn = DriverManager.getConnection(hsqldbUrl, hsqldbId, hsqldbPw);
+	            conn.setAutoCommit(false);
+	            
+	            pstmt = conn.prepareStatement(hsqldbSqlStr);	        	
+
+	        }catch (Exception e){
+	            e.printStackTrace();
+	        }
+	}
+	
 	
 	public void walk(String path) {
 
@@ -50,34 +117,48 @@ public class FileExplorer {
 			
 			if (f.isDirectory()) {
 				walk(f.getAbsolutePath());
-				//System.out.println("Dir:" + f.getAbsoluteFile());
+				//logger.debug("Dir:" + f.getAbsoluteFile());
 				if(dirCnt++ % 1000 == 0)
-					System.out.println(dirCnt + " , Dir:" + f.getAbsoluteFile());
+					logger.info(dirCnt + " , Dir:" + f.getAbsoluteFile());
 			} else {
-				fileName = f.getAbsolutePath();
-				file = Paths.get(fileName);
-				//System.out.println(fileCnt + " , "+ f.getAbsolutePath());
+				filePath = f.getAbsolutePath();
+				fileName = f.getName();
+				if (fileName.lastIndexOf(".") >= 0)
+					fileExt = fileName.substring(fileName.lastIndexOf(".")+1,fileName.length());
+				else
+					fileExt = "";
+				
+				file = Paths.get(filePath);
+				//logger.debug(fileCnt + " , "+ f.getAbsolutePath());
 				
 	            try {
 					BasicFileAttributes attr = Files.readAttributes(file, BasicFileAttributes.class);
-					pstmt.setString(1,fileName);
-					pstmt.setTimestamp(2,new java.sql.Timestamp(attr.lastModifiedTime().toMillis()));
-					pstmt.setTimestamp(3,new java.sql.Timestamp(attr.lastAccessTime().toMillis()));
-					pstmt.setTimestamp(4,new java.sql.Timestamp(attr.creationTime().toMillis()));
+					
+					pstmt.setString(1,filePath);
+					pstmt.setString(2, fileName);
+					pstmt.setLong(3, attr.size());
+					pstmt.setString(4, fileExt);
+					pstmt.setTimestamp(5,new java.sql.Timestamp(attr.lastModifiedTime().toMillis()));
+					pstmt.setTimestamp(6,new java.sql.Timestamp(attr.lastAccessTime().toMillis()));
+					pstmt.setTimestamp(7,new java.sql.Timestamp(attr.creationTime().toMillis()));
+					pstmt.setTimestamp(8,new java.sql.Timestamp(Calendar.getInstance().getTimeInMillis()));
+					pstmt.setInt(9, 1);
 					pstmt.executeUpdate();
 					
-					//System.out.println(sdf.format(attr.lastModifiedTime().toMillis()));
+					//logger.debug(sdf.format(attr.lastModifiedTime().toMillis()));
 					//startDate = new Date();
 					if(fileCnt++ % 1000 == 0) {
-						System.out.println(fileCnt + " , "+ attr.lastModifiedTime()+ " , " + attr.lastAccessTime()+ " , "+ attr.creationTime() + " , "+ f.getAbsolutePath());
+						logger.info(fileCnt + " , "+ attr.lastModifiedTime()+ " , " + attr.lastAccessTime()+ " , "+ attr.creationTime() + " , "+ f.getAbsolutePath());
 						conn.commit();
 					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+					logger.info(filePath);
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+					logger.info(filePath);
 				}
 				
 			}
@@ -85,13 +166,15 @@ public class FileExplorer {
 	}
 
 	public static void main(String[] args) {
-		System.out.println("FileExplorer started. : "+new Date());
+		logger.info("FileExplorer started. : "+new Date());
 		FileExplorer fe = new FileExplorer();
-		fe.db();
-		fe.walk("D:\\");
-		System.out.println("FileExplorer ended. : "+new Date());
-		System.out.println("Total directories: "+ fe.dirCnt);
-		System.out.println("Total files: "+ fe.fileCnt);
+		//fe.dbOracle();
+		//fe.dbMysql();
+		fe.dbHsqldb();
+		fe.walk("C:\\");
+		logger.info("FileExplorer ended. : "+new Date());
+		logger.info("Total directories: "+ fe.dirCnt);
+		logger.info("Total files: "+ fe.fileCnt);
 	}
 
 }

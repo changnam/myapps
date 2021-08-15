@@ -7,8 +7,11 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class OptionsTest {
+	private static Logger logger = LoggerFactory.getLogger(OptionsTest.class);
 	
 	CommandLineParser parser;
 	CommandLine cmd;

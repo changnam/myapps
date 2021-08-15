@@ -14,7 +14,8 @@ public class JDBCHSQLDBExample {
  
     public static void getCustomers() {
         Connection conn = null;
-        String db = "jdbc:hsqldb:file:C:\\Users\\changnamgo\\Downloads\\hsqldb-2.0.0\\hsqldb-2.0.0\\hsqldb\\data\\sampledb/sampledb;ifexists=true";
+        //String db = "jdbc:hsqldb:hsql://localhost/sampledb;ifexists=true";
+        String db = "jdbc:hsqldb:hsql://localhost:9001/syaku;ifexists=true";
         String user = "SA";
         String password = "";
          
