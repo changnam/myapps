@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 public class RegexApp {
 	
 	public static void main(String[] args) throws Exception {
-		File f = new File("C:\\xFrame5\\project\\sample\\screen\\DEMO\\grd_column.xml");
+		File f = new File("C:\\xFrame5\\project\\sample\\screen\\DEMO\\grd_column_move.xml");
 		// 공백문자가 여러개 있거나 없고, < 가 나오고 , 하나이상의 문자열 (group) 이 나오고, 공백이 하나이상 또는 > 가 나오고, 문자열이 있거나 없거나
 		Pattern pattern = Pattern.compile("\\s*<(\\w+).*");
 		Matcher m = null;
