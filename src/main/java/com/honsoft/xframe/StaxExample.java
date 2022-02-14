@@ -20,13 +20,17 @@ public class StaxExample {
 	private PreparedStatement pstmt, pstmtKeys;
 	private ResultSet rs;
 	
-	private String sqlStr = "insert into element_hier (file_path,file_name,idx,element_name,parent) values(?,?,?,?,?)";
+	private String sqlStr = "insert into element_hier (file_path,file_name,depth,element_name,element_value,parent,attr_name, attr_value) values(?,?,?,?,?,?,?,?)";
 	
 	private String db = "jdbc:mysql://localhost:3306/hanacard";
     private String user = "hanacard";
     private String password = "hanacard";
     
     File file;
+    
+    XMLInputFactory inputFactory ;    
+    XMLStreamReader reader ;
+    InputStream is ;
     
     public StaxExample() {
     	try {
@@ -35,7 +39,9 @@ public class StaxExample {
 			conn = DriverManager.getConnection(db,user,password);
 			conn.setAutoCommit(false);
 			
-			pstmt = conn.prepareStatement(sqlStr);				
+			pstmt = conn.prepareStatement(sqlStr);	
+			
+			inputFactory = XMLInputFactory.newInstance();
 			
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
@@ -48,13 +54,10 @@ public class StaxExample {
   
     public void getXml(File file) {
     	this.file = file;
-        InputStream is = null;
+        
         try {
             is = new FileInputStream(file);
-
-            XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-            XMLStreamReader reader = inputFactory.createXMLStreamReader(is);
-
+            reader = inputFactory.createXMLStreamReader(is);
             parse(reader, 0, "maplist");
             
             conn.commit();
@@ -80,11 +83,16 @@ public class StaxExample {
             if(reader.hasNext()) {
                 switch(reader.next()) {
                 case XMLStreamConstants.START_ELEMENT:
+                	depth++;
                     writeBeginTag(reader.getLocalName(), depth, parent);
-                    parse(reader, depth+1,reader.getLocalName());
+                    parse(reader, depth,reader.getLocalName());
                     break;
                 case XMLStreamConstants.END_ELEMENT:
-                    writeEndTag(reader.getLocalName(), depth-1);
+                	depth--;
+                    writeEndTag(reader.getLocalName(), depth);
+                    return;
+                case XMLStreamConstants.CHARACTERS:
+                    writeTagData(reader.getLocalName(), depth);
                     return;
                 }
             }else {
@@ -113,6 +121,13 @@ public class StaxExample {
     }
 
     private void writeEndTag(String tag, int depth) {
+        //for(int i = 0; i < depth; i++) {
+        //    System.out.print(" ");
+       // }
+       // System.out.println("</" + tag + ">");
+    }
+    
+    private void writeTagData(String tag, int depth) {
         //for(int i = 0; i < depth; i++) {
         //    System.out.print(" ");
        // }

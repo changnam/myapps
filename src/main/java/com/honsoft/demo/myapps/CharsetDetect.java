@@ -10,8 +10,8 @@ public class CharsetDetect {
 	public static void main(String[] args) throws IOException {
 		
 		 //File f = new File("C:\\xFrame5\\project\\sample\\screen\\DEMO\\grd_column_move.xml");
-	        File f = new File("C:\\Users\\chang\\git\\myapps\\src\\main\\java\\com\\honsoft\\demo\\myapps\\test.html");
-
+	        //File f = new File("C:\\Users\\chang\\git\\myapps\\src\\main\\java\\com\\honsoft\\demo\\myapps\\test.html");
+	        File f = new File("C:\\Users\\chang\\Downloads\\내 결제 계정, 22. 1. 1. _ 22. 1. 31..csv");
 		 System.out.println(findFileEncoding(f));
 	}
 	

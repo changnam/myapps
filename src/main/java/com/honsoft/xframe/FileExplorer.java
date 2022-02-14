@@ -21,6 +21,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 
+import javax.xml.stream.XMLStreamException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +56,7 @@ public class FileExplorer {
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
 
 	StaxExample staxExample = new StaxExample();
+	StaxReadXml staxReadXml = new StaxReadXml();
 	int xmlCnt = 0;
 	
 	public void dbOracle() {
@@ -247,9 +250,49 @@ public class FileExplorer {
 		}
 	}
 
+	public void walkFull(String path) throws FileNotFoundException, XMLStreamException, SQLException {
+
+		File root = new File(path);
+		File[] list = root.listFiles();
+
+		if (list == null)
+			return;
+
+		for (File f : list) {
+
+			if (f.isDirectory()) {
+				walkFull(f.getAbsolutePath());
+				// logger.debug("Dir:" + f.getAbsoluteFile());
+				dirCnt++;
+				if (dirCnt % 1000 == 0)
+					logger.info(dirCnt + " , Dir:" + f.getAbsoluteFile());
+			} else {
+				fileCnt++;
+				filePath = f.getAbsolutePath();
+				fileName = f.getName();
+				if (fileName.lastIndexOf(".") >= 0)
+					fileExt = fileName.substring(fileName.lastIndexOf(".") + 1, fileName.length());
+				else
+					fileExt = "";
+
+				file = Paths.get(filePath);
+
+				if("XML".equals(fileExt.toUpperCase())){
+					xmlCnt++;
+					staxReadXml.parse(f);
+				}
+				
+				
+				if (fileCnt % 100 == 0) {
+					System.out.println(fileCnt+" files processed."+f.getAbsolutePath());
+				}
+			}
+		}
+	}
+
 	
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws FileNotFoundException, XMLStreamException, SQLException {
 		logger.info("FileExplorer started. : " + new Date());
 		FileExplorer fe = new FileExplorer();
 		// fe.dbOracle();
@@ -257,7 +300,8 @@ public class FileExplorer {
 		// fe.dbHsqldb();
 		//fe.walk("C:\\xFrame\\project\\screen\\XAP"); // element 별 attribute 종류
 		//fe.walkHier("C:\\xFrame\\project\\screen\\XAP"); // element hierachy
-		fe.walkReal("C:\\xFrame\\project\\screen\\XAP"); // element attribute data 
+		//fe.walkReal("C:\\xFrame\\project\\screen\\XAP"); // element attribute data 
+		fe.walkFull("C:\\xFrame\\project\\screen\\XAP"); // element attribute data 
 		logger.info("FileExplorer ended. : " + new Date());
 		logger.info("Total directories: " + fe.dirCnt);
 		logger.info("Total files: " + fe.fileCnt);
