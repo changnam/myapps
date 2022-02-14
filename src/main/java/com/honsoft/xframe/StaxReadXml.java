@@ -27,7 +27,7 @@ public class StaxReadXml {
 	private PreparedStatement pstmt, pstmtKeys;
 	private ResultSet rs;
 
-	private String sqlStr = "insert into element_hier (file_path,file_name,depth,element_name,element_value,parent,attr_name, attr_value) values(?,?,?,?,?,?,?,?)";
+	private String sqlStr = "insert into element_hier (file_path,file_name,depth,element_name,element_id,parent,attr_name, attr_value) values(?,?,?,?,?,?,?,?)";
 
 	private String db = "jdbc:mysql://localhost:3306/hanacard";
 	private String user = "hanacard";
@@ -64,11 +64,12 @@ public class StaxReadXml {
 		this.f = file;
 		eventReader = factory.createXMLEventReader(new FileInputStream(file), "euc-kr");
 		depth = 0;
-
+		int cnt = 0;
 		while (eventReader.hasNext()) {
 			XMLEvent event = eventReader.nextEvent();
 			if (event.isStartElement()) {
 				depth++;
+				cnt++;
 				StartElement element = (StartElement) event;
 				// System.out.println("-------------- tag : "+element.getName());
 				Iterator<Attribute> iterator = element.getAttributes();
@@ -84,7 +85,7 @@ public class StaxReadXml {
 						pstmt.setString(2, f.getName());
 						pstmt.setInt(3, depth);
 						pstmt.setString(4, element.getName().getLocalPart());
-						pstmt.setString(5, "");
+						pstmt.setInt(5, cnt);
 						pstmt.setString(6, "");
 						pstmt.setString(7, name.getLocalPart());
 						pstmt.setString(8, value);
@@ -96,7 +97,7 @@ public class StaxReadXml {
 					pstmt.setString(2, f.getName());
 					pstmt.setInt(3, depth);
 					pstmt.setString(4,element.getName().getLocalPart());
-					pstmt.setString(5, "");
+					pstmt.setInt(5, cnt);
 					pstmt.setString(6, "");
 					pstmt.setString(7, "");
 					pstmt.setString(8, "");
