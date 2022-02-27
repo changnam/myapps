@@ -27,7 +27,7 @@ public class StaxReadXml {
 	private PreparedStatement pstmt, pstmtKeys;
 	private ResultSet rs;
 
-	private String sqlStr = "insert into element_hier (file_path,file_name,depth,element_name,element_id,parent,attr_name, attr_value) values(?,?,?,?,?,?,?,?)";
+	private String sqlStr = "insert into elements (file_path,file_name,depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value) values(?,?,?,?,?,?,?,?,?)";
 
 	private String db = "jdbc:mysql://localhost:3306/hanacard";
 	private String user = "hanacard";
@@ -65,12 +65,17 @@ public class StaxReadXml {
 		eventReader = factory.createXMLEventReader(new FileInputStream(file), "euc-kr");
 		depth = 0;
 		int cnt = 0;
+		ParentElement[] open_elements = new ParentElement[20];
+		open_elements[0] = new ParentElement("", 0);
+		ParentElement parent = null;
 		while (eventReader.hasNext()) {
 			XMLEvent event = eventReader.nextEvent();
 			if (event.isStartElement()) {
 				depth++;
 				cnt++;
 				StartElement element = (StartElement) event;
+				parent = open_elements[depth - 1];
+				open_elements[depth] = new ParentElement(element.getName().getLocalPart(), cnt);
 				// System.out.println("-------------- tag : "+element.getName());
 				Iterator<Attribute> iterator = element.getAttributes();
 				if (iterator.hasNext()) {
@@ -80,27 +85,30 @@ public class StaxReadXml {
 						String value = attribute.getValue();
 						// System.out.println(f.getAbsolutePath()+","+f.getName() +
 						// ","+element.getName()+","+name+","+value);
-						//System.out.println(element.getName() + " , " + depth + " , " + name + " , " + value);
+						// System.out.println(element.getName() + " , " + depth + " , " + name + " , " +
+						// value);
 						pstmt.setString(1, f.getAbsolutePath());
 						pstmt.setString(2, f.getName());
 						pstmt.setInt(3, depth);
 						pstmt.setString(4, element.getName().getLocalPart());
 						pstmt.setInt(5, cnt);
-						pstmt.setString(6, "");
-						pstmt.setString(7, name.getLocalPart());
-						pstmt.setString(8, value);
+						pstmt.setString(6, parent.getParent_name());
+						pstmt.setInt(7, parent.getParent_id());
+						pstmt.setString(8, name.getLocalPart());
+						pstmt.setString(9, value);
 						pstmt.executeUpdate();
 					}
 				} else {
-					//System.out.println(element.getName() + " , " + depth);
+					// System.out.println(element.getName() + " , " + depth);
 					pstmt.setString(1, f.getAbsolutePath());
 					pstmt.setString(2, f.getName());
 					pstmt.setInt(3, depth);
-					pstmt.setString(4,element.getName().getLocalPart());
+					pstmt.setString(4, element.getName().getLocalPart());
 					pstmt.setInt(5, cnt);
-					pstmt.setString(6, "");
-					pstmt.setString(7, "");
+					pstmt.setString(6, parent.getParent_name());
+					pstmt.setInt(7, parent.getParent_id());
 					pstmt.setString(8, "");
+					pstmt.setString(9, "");
 					pstmt.executeUpdate();
 				}
 
@@ -108,7 +116,7 @@ public class StaxReadXml {
 				depth--;
 			}
 		}
-		
+
 		conn.commit();
 
 	}

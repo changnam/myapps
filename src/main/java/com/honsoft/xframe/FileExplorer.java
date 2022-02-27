@@ -239,7 +239,7 @@ public class FileExplorer {
 				if("XML".equals(fileExt.toUpperCase())){
 					xmlCnt++;
 					XmlToObject.prepareXML(f);
-					XmlToObject.insertXML();
+					//XmlToObject.insertXML();
 				}
 				
 				
