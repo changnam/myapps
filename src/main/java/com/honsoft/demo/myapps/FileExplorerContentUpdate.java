@@ -46,7 +46,11 @@ public class FileExplorerContentUpdate {
 	String h2SqlStr = "insert into files (file_path, file_name, file_size, file_ext, last_mod_time,last_access_time,creation_time, runjob_time, runjob_id) values (?,?,?,?,?,?,?,?,?)";
 	String hsqldbSqlStr = "insert into files (file_path, file_name, file_size, file_ext, last_mod_time,last_access_time,creation_time, runjob_time, runjob_id) values (?,?,?,?,?,?,?,?,?)";
 
+<<<<<<< HEAD
 	String oracleUpdateStr = "update elements where file_path = ? and element_id = ?";
+=======
+	String oracleUpdateStr = "update elements where file_path = ? and element_id = ?"
+>>>>>>> 8732615b2b4ecf5e2efd5ca175763264c8c1c630
 	String filePath, fileName, fileExt;
 	
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
