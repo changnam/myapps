@@ -38,18 +38,18 @@ public class StaxReadXml {
 
 	//private String sqlStr = "insert into elements (file_path,file_name,depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value) values(?,?,?,?,?,?,?,?,?)";
 
-	//private String db = "jdbc:mysql://localhost:3306/apitest";
-	//private String user = "shoppingnt";
-	//private String password = "Shoppingnt2021!@";
+	private String db = "jdbc:mysql://localhost:3306/apitest";
+	private String user = "shoppingnt";
+	private String password = "Shoppingnt2021!@";
 	
 	private String sqlStr = "insert into elements (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id) values(?,?,?,?,?,?,?,?,?,?)";
 	private String sqlStrScript = "insert into scripts (file_path,file_name,script_text) values(?,?,?)";
 	private String sqlStrScriptSave = "SELECT CASE substr(file_name,INSTR(file_name,'.',-1)+1) WHEN 'xfdl' THEN REPLACE (file_path,'.xfdl','.js') WHEN 'xjs' THEN REPLACE (file_path,'.xjs','.js') END AS file_path_js,script_text  FROM scripts where script_text is not null ORDER BY file_name";
 	private String sqlStrDataset = "insert into xdatasets(file_path,file_name,ds_name,col_name,col_desc,col_length,col_data,col_callback,col_order) values (?,?,?,?,?,?,?,?,?)";
 
-	private String db = "jdbc:oracle:thin:@localhost:1521:xe";
-	private String user = "cddba1";
-	private String password = "cn0012";
+	// String db = "jdbc:oracle:thin:@localhost:1521:xe";
+	//private String user = "cddba1";
+	//private String password = "cn0012";
 	
 
 	File f;
@@ -61,8 +61,8 @@ public class StaxReadXml {
 
 	public StaxReadXml() {
 		try {
-			//Class.forName("com.mysql.cj.jdbc.Driver");
-			Class.forName("oracle.jdbc.driver.OracleDriver");
+			Class.forName("com.mysql.cj.jdbc.Driver");
+			//Class.forName("oracle.jdbc.driver.OracleDriver");
 
 			conn = DriverManager.getConnection(db, user, password);
 			conn.setAutoCommit(false);

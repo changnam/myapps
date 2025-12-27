@@ -77,8 +77,10 @@ public class FileExplorerContentFlat {
 	String mysqlSqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (?,?,?,?,?)";
 	String h2SqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (?,?,?,?,?)";
 	String hsqldbSqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (,?,?,?,?,?)";
-	String mysqlSqlLine = "insert into filecontents(file_path, file_name,line_num, line_text,work_timestamp) values(?,?,?,?,?)";
+	String mysqlSqlLine = "insert into filecontents(file_path, file_name,file_ext,line_num, line_text,work_timestamp) values(?,?,?,?,?,?)";
 	String mysqlEncoding = "insert into fileencodings (file_path, file_name, line_num) values (?,?,?)";
+	String mysqlSqlElements = "SELECT element_name,attr_name,max(LENGTHB(attr_value)) max_length FROM elements GROUP BY element_name,attr_name ORDER BY element_name,attr_name";
+	String mysqlSqlElementsUpdate = "SELECT file_path,element_id,parent_id,element_name,attr_name,attr_value FROM elements ORDER BY file_path,element_id,parent_id,element_name,attr_name";
 	
 	String filePath, fileName, fileExt;
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
@@ -102,7 +104,7 @@ public class FileExplorerContentFlat {
 			pstmtLine = conn.prepareStatement(oracleSqlLine);
 			pstmtEncoding = conn.prepareStatement(oracleEncoding);
 			pstmtElements = conn.prepareStatement(oracleSqlElements);
-			pstmtElementsUpdate = conn.prepareStatement(oracleSqlElementsUpdate);
+			pstmtElementsUpdate = conn.prepareStatement(oracleSqlElementsUpdate);	
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -117,7 +119,10 @@ public class FileExplorerContentFlat {
 			conn.setAutoCommit(false);
 
 			pstmt = conn.prepareStatement(mysqlSqlStr);
-
+			pstmtLine = conn.prepareStatement(mysqlSqlLine);
+			pstmtEncoding = conn.prepareStatement(mysqlEncoding);
+			pstmtElements = conn.prepareStatement(mysqlSqlElements);
+			pstmtElementsUpdate = conn.prepareStatement(mysqlSqlElementsUpdate);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -657,16 +662,16 @@ public class FileExplorerContentFlat {
 	public static void main(String[] args) throws Exception {
 		logger.info("FileExplorer started. : " + new Date());
 		FileExplorerContentFlat fe = new FileExplorerContentFlat();
-		fe.dbOracle();
-		//fe.dbMysql();
+		//fe.dbOracle();
+		fe.dbMysql();
 		//fe.dbHsqldb();
-		//fe.walk("C:\\CONV_MAPPING\\mapping_name_0528", Charset.forName("UTF-8"));
+		fe.walk("D:\\DBS\\project\\src", Charset.forName("UTF-8"));
 		//fe.walkStax("C:\\workspace\\DBSB.nTreeWorks\\Web\\xui\\bc\\ACA805L.xfdl");
 		//fe.walkScript("C:\\nTree\\workspace\\DBSB.nTreeWorks\\Web\\xui");
 		//fe.walk("C:\\CONV\\report_0510\\NTREE", Charset.forName("UTF-8"));
 		//fe.walkStax("C:\\xFrame\\project\\DSI\\screen\\NTREE");
-		fe.walkStaxFlat();
-		fe.walkStaxFlatUpdate();
+		//fe.walkStaxFlat();
+		//fe.walkStaxFlatUpdate();
 		//fe.walkHash("C:\\ASIS");
 		//fe.walkScriptSave();
 		logger.info("FileExplorer ended. : " + new Date());
