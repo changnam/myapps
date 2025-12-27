@@ -24,7 +24,7 @@ public class FileExplorer {
 	Date startDate, endDate = null;
 	int dirCnt, fileCnt = 0;
 	Path file;
-	String mysqlUrl = "jdbc:mysql://localhost:3306/quickguide";
+	String mysqlUrl = "jdbc:mysql://localhost:3306/apitest";
 	String mysqlId = "shoppingnt", mysqlPw = "Shoppingnt2021!@";
 	
 	String oracleUrl = "jdbc:oracle:thin:@localhost:1521:jerry";
@@ -105,7 +105,7 @@ public class FileExplorer {
 	}
 	
 	
-	public void walk(String path) {
+	public void walk(String path) throws SQLException {
 
 		File root = new File(path);
 		File[] list = root.listFiles();
@@ -161,17 +161,32 @@ public class FileExplorer {
 					logger.info(filePath);
 				}
 				
+	            conn.commit(); //마지막에 반드시 commit 을 해줘야 함. setAutoCommit(false) 했기 때문
 			}
 		}
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		logger.info("FileExplorer started. : "+new Date());
 		FileExplorer fe = new FileExplorer();
 		//fe.dbOracle();
-		//fe.dbMysql();
-		fe.dbHsqldb();
-		fe.walk("C:\\");
+		fe.dbMysql();
+		//fe.dbHsqldb();
+		String fruit = "apple";
+	    switch(fruit){
+	        case "apple":
+	            System.out.println("@@@@@@@@@@ apple");
+	        case "banana":
+	        	System.out.println("@@@@ apple or banana");
+	            break;
+	        case "melon":
+	        	System.out.println("@@@@@@@@@2 melon");
+	            break;
+	        default:
+	        	System.out.println("@@@@@@@ default");
+	    }
+
+		fe.walk("D:\\workspace\\eclipse-202103-workspace\\myapps");
 		logger.info("FileExplorer ended. : "+new Date());
 		logger.info("Total directories: "+ fe.dirCnt);
 		logger.info("Total files: "+ fe.fileCnt);
