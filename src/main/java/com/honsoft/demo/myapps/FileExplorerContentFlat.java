@@ -34,8 +34,8 @@ import org.slf4j.LoggerFactory;
 import com.honsoft.xframe.StaxExample;
 import com.honsoft.xframe.StaxReadXml;
 
-public class FileExplorerContent {
-	private static Logger logger = LoggerFactory.getLogger(FileExplorerContent.class);
+public class FileExplorerContentFlat {
+	private static Logger logger = LoggerFactory.getLogger(FileExplorerContentFlat.class);
 	Date startDate, endDate = null;
 	int dirCnt, fileCnt, totalLines, skipLines, totalMatchCnt = 0;
 	int xmlCnt, jsCnt = 0;
@@ -62,7 +62,7 @@ public class FileExplorerContent {
 	String mariadbId = "hanacard", mariadbPw = "hanacard";
 
 	Connection conn;
-	PreparedStatement pstmt, pstmtLine, pstmtSymbol, pstmtHeader, pstmtEncoding;
+	PreparedStatement pstmt, pstmtLine, pstmtSymbol, pstmtHeader, pstmtEncoding, pstmtElements, pstmtElementsUpdate;
 	PreparedStatement pstmtScreen, pstmtTranMap, pstmtPushButton;
 	
 	Statement stmt;
@@ -71,7 +71,9 @@ public class FileExplorerContent {
 	String oracleSqlStr = "insert into filecontents (id, file_path, file_name, file_ext, line_num, line_text) values (files_seq.nextval,?,?,?,?,?)";
 	String oracleSqlLine = "insert into filecontents(id,file_path, file_name,file_ext, line_num, line_text,work_timestamp) values(files_seq.nextval,?,?,?,?,?,?)";
 	String oracleEncoding = "insert into fileencodings (file_path, file_name, line_num) values (?,?,?)";
-	
+	String oracleSqlElements = "SELECT element_name,attr_name,max(LENGTHB(attr_value)) max_length FROM elements GROUP BY element_name,attr_name ORDER BY element_name,attr_name";
+	//String oracleSqlElementsUpdate = "SELECT file_path,element_id,parent_id,element_name,attr_name,attr_value FROM elements where regexp_like(file_path,'cmf006u','i') ORDER BY file_path,element_id,parent_id,element_name,attr_name";
+	String oracleSqlElementsUpdate = "SELECT file_path,element_id,parent_id,element_name,attr_name,attr_value FROM elements ORDER BY file_path,element_id,parent_id,element_name,attr_name";
 	String mysqlSqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (?,?,?,?,?)";
 	String h2SqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (?,?,?,?,?)";
 	String hsqldbSqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (,?,?,?,?,?)";
@@ -99,6 +101,8 @@ public class FileExplorerContent {
 			pstmt = conn.prepareStatement(oracleSqlStr);
 			pstmtLine = conn.prepareStatement(oracleSqlLine);
 			pstmtEncoding = conn.prepareStatement(oracleEncoding);
+			pstmtElements = conn.prepareStatement(oracleSqlElements);
+			pstmtElementsUpdate = conn.prepareStatement(oracleSqlElementsUpdate);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -191,12 +195,7 @@ public class FileExplorerContent {
 						|| "XFDL".equals(fileExt.toUpperCase())
 						|| "XJS".equals(fileExt.toUpperCase())
 						|| "REPORT".equals(fileExt.toUpperCase())
-						|| "CSV".equals(fileExt.toUpperCase())
-						|| "LOG".equals(fileExt.toUpperCase())
-						|| "JSON".equals(fileExt.toUpperCase())
-						|| "CSS".equals(fileExt.toUpperCase())
-						|| "TS".equals(fileExt.toUpperCase())
-						|| "TSX".equals(fileExt.toUpperCase())) {
+						|| "CSV".equals(fileExt.toUpperCase())) {
 					xmlCnt++;
 					encoding = findFileEncoding(root);
 					if("UTF-8".equals(encoding)) {
@@ -252,12 +251,7 @@ public class FileExplorerContent {
 						|| "XFDL".equals(fileExt.toUpperCase())
 						|| "XJS".equals(fileExt.toUpperCase())
 						|| "REPORT".equals(fileExt.toUpperCase())
-						|| "CSV".equals(fileExt.toUpperCase())
-						|| "LOG".equals(fileExt.toUpperCase())
-						|| "JSON".equals(fileExt.toUpperCase())
-						|| "CSS".equals(fileExt.toUpperCase())
-						|| "TS".equals(fileExt.toUpperCase())
-						|| "TSX".equals(fileExt.toUpperCase())) {
+						|| "CSV".equals(fileExt.toUpperCase())) {
 					xmlCnt++;
 					encoding = findFileEncoding(f);
 					if("UTF-8".equals(encoding)) {
@@ -662,24 +656,246 @@ public class FileExplorerContent {
 	
 	public static void main(String[] args) throws Exception {
 		logger.info("FileExplorer started. : " + new Date());
-		FileExplorerContent fe = new FileExplorerContent();
+		FileExplorerContentFlat fe = new FileExplorerContentFlat();
 		fe.dbOracle();
 		//fe.dbMysql();
 		//fe.dbHsqldb();
-		fe.walk("C:\\nextapps\\public", Charset.forName("UTF-8"));
-		//fe.walkStax("C:\\working_change");
+		//fe.walk("C:\\CONV_MAPPING\\mapping_name_0528", Charset.forName("UTF-8"));
+		//fe.walkStax("C:\\workspace\\DBSB.nTreeWorks\\Web\\xui\\bc\\ACA805L.xfdl");
 		//fe.walkScript("C:\\nTree\\workspace\\DBSB.nTreeWorks\\Web\\xui");
-		//fe.walk("C:\\반입파일\\next-sample\\package.json", Charset.forName("UTF-8"));
-		System.out.println("args length : "+args.length);
-		//if (args.length > 0)
-		//	fe.walkStax(args[0]);
-		//else
-		//	fe.walkStax("C:\\xFrame\\project\\DSI\\screen\\NTREE");
+		//fe.walk("C:\\CONV\\report_0510\\NTREE", Charset.forName("UTF-8"));
+		//fe.walkStax("C:\\xFrame\\project\\DSI\\screen\\NTREE");
+		fe.walkStaxFlat();
+		fe.walkStaxFlatUpdate();
 		//fe.walkHash("C:\\ASIS");
 		//fe.walkScriptSave();
 		logger.info("FileExplorer ended. : " + new Date());
 		logger.info("Total directories: " + fe.dirCnt);
 		logger.info("Total files: " + fe.fileCnt);
+	}
+
+	private void walkStaxFlatUpdate() throws SQLException {
+		// TODO Auto-generated method stub
+		int cnt = 0;
+		Boolean programStart = true;
+		rs = pstmtElementsUpdate.executeQuery();
+		stmt = conn.createStatement();
+		StringBuffer sb = new StringBuffer();
+		StringBuffer sbColumns = new StringBuffer();
+		StringBuffer sbValues = new StringBuffer();
+		
+		String prev_file_path = "";
+		int prev_element_id = 0;
+		
+		while(rs.next()) {
+			//System.out.println(cnt++ + " insert "+rs.getString("file_path")+","+rs.getInt("element_id")+","+rs.getInt("parent_id")+","+rs.getString("attr_name")+","+rs.getString("attr_value"));
+			if (rs.getString("attr_name") == null)
+				continue;
+			
+			if(prev_element_id == rs.getInt("element_id")) {
+					sbColumns.append(","+chaneAttrName(rs.getString("attr_name")));
+					sbValues.append("','"+replaceSingleQuote(rs.getString("attr_value")));
+			} else {			
+				prev_element_id = rs.getInt("element_id");
+				if (programStart) {
+					programStart = false;
+					//System.out.println("여기서 테이블 생성 "+sb.toString());
+						sb.append("insert into xf_"+rs.getString("element_name")+"(");
+						sbColumns.append("file_path,element_id,parent_id,"+chaneAttrName(rs.getString("attr_name")));
+						sbValues.append(" values('"+rs.getString("file_path")+"',"+rs.getInt("element_id")+","+rs.getInt("parent_id")+",'"+replaceSingleQuote(rs.getString("attr_value")));
+					//sb.delete(0, sb.length());
+				}else {
+					sbColumns.append(")");
+					sbValues.append("')");
+					//System.out.println(cnt++ + " 여기서 insert "+sb.toString()+sbColumns.toString()+sbValues.toString());
+					//System.out.println(tableName);
+					try {
+						System.out.println(cnt++ + " 여기서 insert "+sb.toString()+sbColumns.toString()+sbValues.toString());
+					    if (cnt == 944) 
+					    	System.out.println("break point");
+						//stmt.executeUpdate("drop table "+tableName);
+						stmt.executeUpdate(sb.toString()+sbColumns.toString()+sbValues.toString());
+						conn.commit();
+					} catch(SQLException e) {
+						//e.printStackTrace();
+						if (e.getErrorCode() == 955) {
+							e.printStackTrace();
+						}
+						else {
+							System.out.println(e.getErrorCode());
+							e.printStackTrace();
+							throw e;
+						}
+					}
+					sb.delete(0, sb.length());
+					sbColumns.delete(0, sbColumns.length());
+					sbValues.delete(0, sbValues.length());		
+					
+					sb.append("insert into xf_"+rs.getString("element_name")+"(");
+					sbColumns.append("file_path,element_id,parent_id,"+chaneAttrName(rs.getString("attr_name")));
+					sbValues.append(" values('"+rs.getString("file_path")+"',"+rs.getInt("element_id")+","+rs.getInt("parent_id")+",'"+replaceSingleQuote(rs.getString("attr_value")));
+					
+					//startFlag = true;
+				}
+			}
+		}
+		
+		sbColumns.append(")");
+		sbValues.append("')");
+		try {
+			//stmt.executeUpdate("drop table "+tableName);
+			stmt.executeUpdate(sb.toString()+sbColumns.toString()+sbValues.toString());
+			conn.commit();
+		} catch(SQLException e) {
+			//e.printStackTrace();
+			if (e.getErrorCode() == 955) {
+				e.printStackTrace();
+			}
+			else {
+				System.out.println(e.getErrorCode());
+				e.printStackTrace();
+				throw e;
+			}
+		}
+		
+	}
+
+	private String replaceSingleQuote(String string) {
+		// TODO Auto-generated method stub
+		if (string != null) {
+			return string.replace("'", "''");
+		} else {
+			return "";
+		}
+	}
+
+	private void walkStaxFlat() throws SQLException {
+		// TODO Auto-generated method stub
+		stmt = conn.createStatement();
+		int cnt = 0;
+		Boolean startFlag = true, programStart = true;
+		String prev_element_name = "";
+		String tableName = "";
+		StringBuffer sb = new StringBuffer();
+		int columnLength = 0;
+		rs = pstmtElements.executeQuery();
+		while(rs.next()) {
+			//System.out.println(cnt++ + " element_name: "+rs.getString("element_name")+ ",attr_name: "+rs.getString("attr_name")+ ",max_length: "+rs.getInt("max_length"));
+			if (rs.getString("attr_name") == null)
+				continue;
+			
+			if(prev_element_name.equals(rs.getString("element_name"))) {
+					if (rs.getInt("max_length") == 0)
+						sb.append(","+chaneAttrName(rs.getString("attr_name"))+ " varchar2(512) ");
+					else
+						sb.append(","+chaneAttrName(rs.getString("attr_name"))+ " varchar2("+rs.getInt("max_length") +")");
+			} else {			
+				prev_element_name = rs.getString("element_name");
+				if (programStart) {
+					programStart = false;
+					//System.out.println("여기서 테이블 생성 "+sb.toString());
+					if (rs.getInt("max_length") == 0) {
+						sb.append("create table xf_"+rs.getString("element_name")+" ( "+defaultColumns()+chaneAttrName(rs.getString("attr_name"))+ " varchar2(512) ");
+						tableName = "xf_"+rs.getString("element_name");
+					} else {
+						sb.append("create table xf_"+rs.getString("element_name")+" ( "+defaultColumns()+chaneAttrName(rs.getString("attr_name"))+ " varchar2("+rs.getInt("max_length") +")");
+						tableName = "xf_"+rs.getString("element_name");
+					}
+					//sb.delete(0, sb.length());
+				}else {
+					sb.append(")");
+					//System.out.println(cnt++ + " 여기서 테이블 생성 "+sb.toString());
+					System.out.println(tableName);
+					try {
+						stmt.executeUpdate("drop table "+tableName);
+						//stmt.executeUpdate(sb.toString());
+					} catch(SQLException e) {
+						//e.printStackTrace();
+						if (e.getErrorCode() == 955 || e.getErrorCode() == 942) {
+							e.printStackTrace();
+						}
+						else {
+							e.printStackTrace();
+							throw e;
+						}
+					}
+					
+					try {
+						//stmt.executeUpdate("drop table "+tableName);
+						stmt.executeUpdate(sb.toString());
+					} catch(SQLException e) {
+						//e.printStackTrace();
+						if (e.getErrorCode() == 955 || e.getErrorCode() == 942) {
+							e.printStackTrace();
+						}
+						else {
+							e.printStackTrace();
+							throw e;
+						}
+					}
+					
+					sb.delete(0, sb.length());
+					if (rs.getInt("max_length") == 0) {
+						sb.append("create table xf_"+rs.getString("element_name")+" ( "+defaultColumns()+chaneAttrName(rs.getString("attr_name"))+ " varchar2(512) ");
+						tableName = "xf_"+rs.getString("element_name");
+					} else {
+						sb.append("create table xf_"+rs.getString("element_name")+" ( "+defaultColumns()+chaneAttrName(rs.getString("attr_name"))+ " varchar2("+ rs.getInt("max_length") +")");
+						tableName = "xf_"+rs.getString("element_name");
+					}
+		
+					startFlag = true;
+				}
+			}
+		}
+		sb.append(")");
+		//System.out.println(cnt++ + " 여기서 마지막 테이블 생성 "+sb.toString());
+		System.out.println(tableName);
+		try {
+			stmt.executeUpdate("drop table "+tableName);
+			//stmt.executeUpdate(sb.toString());
+		} catch(SQLException e) {
+			//e.printStackTrace();
+			if (e.getErrorCode() == 955 || e.getErrorCode() == 942) {
+				e.printStackTrace();
+			}
+			else {
+				System.out.println(e.getErrorCode());
+				e.printStackTrace();
+				throw e;
+			}
+		}
+		
+		try {
+			//stmt.executeUpdate("drop table "+tableName);
+			stmt.executeUpdate(sb.toString());
+		} catch(SQLException e) {
+			//e.printStackTrace();
+			if (e.getErrorCode() == 955 || e.getErrorCode() == 942) {
+				e.printStackTrace();
+			}
+			else {
+				System.out.println(e.getErrorCode());
+				e.printStackTrace();
+				throw e;
+			}
+		}
+		rs.close();
+		pstmtElements.close();
+		System.out.println("break point");
+	}
+
+	private String defaultColumns() {
+		// TODO Auto-generated method stub
+		return "file_path varchar2(512), element_id number, parent_id number, ";
+	}
+
+	private String chaneAttrName(String string) {
+		// TODO Auto-generated method stub
+		if ("row".equals(string)||"desc".equals(string)||"comment".equals(string)) {
+			return "xf_"+string;
+		}else {
+			return string;
+		}
 	}
 
 	private void walkScriptSave() throws XMLStreamException, SQLException, IOException {

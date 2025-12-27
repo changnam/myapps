@@ -19,8 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class FileExplorer {
-	private static Logger logger = LoggerFactory.getLogger(FileExplorer.class);
+public class FileExplorerContentUpdate {
+	private static Logger logger = LoggerFactory.getLogger(FileExplorerContentUpdate.class);
 	Date startDate, endDate = null;
 	int dirCnt, fileCnt = 0;
 	Path file;
@@ -46,7 +46,9 @@ public class FileExplorer {
 	String h2SqlStr = "insert into files (file_path, file_name, file_size, file_ext, last_mod_time,last_access_time,creation_time, runjob_time, runjob_id) values (?,?,?,?,?,?,?,?,?)";
 	String hsqldbSqlStr = "insert into files (file_path, file_name, file_size, file_ext, last_mod_time,last_access_time,creation_time, runjob_time, runjob_id) values (?,?,?,?,?,?,?,?,?)";
 
+	String oracleUpdateStr = "update elements where file_path = ? and element_id = ?";
 	String filePath, fileName, fileExt;
+	
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
 	
 	public void dbOracle() {
@@ -167,11 +169,11 @@ public class FileExplorer {
 
 	public static void main(String[] args) {
 		logger.info("FileExplorer started. : "+new Date());
-		FileExplorer fe = new FileExplorer();
+		FileExplorerContentUpdate fe = new FileExplorerContentUpdate();
 		fe.dbOracle();
 		//fe.dbMysql();
 		//fe.dbHsqldb();
-		fe.walk("C:\\nextapps");
+		fe.walk("C:\\xFrame\\project\\DSI\\screen\\NTREE\\bd\\");
 		logger.info("FileExplorer ended. : "+new Date());
 		logger.info("Total directories: "+ fe.dirCnt);
 		logger.info("Total files: "+ fe.fileCnt);
