@@ -71,7 +71,7 @@ public class FileExplorerContentFlat {
 	String oracleSqlStr = "insert into filecontents (id, file_path, file_name, file_ext, line_num, line_text) values (files_seq.nextval,?,?,?,?,?)";
 	String oracleSqlLine = "insert into filecontents(id,file_path, file_name,file_ext, line_num, line_text,work_timestamp) values(files_seq.nextval,?,?,?,?,?,?)";
 	String oracleEncoding = "insert into fileencodings (file_path, file_name, line_num) values (?,?,?)";
-	String oracleSqlElements = "SELECT element_name,attr_name,max(LENGTHB(attr_value)) max_length FROM elements GROUP BY element_name,attr_name ORDER BY element_name,attr_name";
+	String oracleSqlElements = "SELECT element_name,attr_name,max(LENGTHB(attr_value)) max_length FROM elements where attr_name is not null GROUP BY element_name,attr_name ORDER BY element_name,attr_name";
 	//String oracleSqlElementsUpdate = "SELECT file_path,element_id,parent_id,element_name,attr_name,attr_value FROM elements where regexp_like(file_path,'cmf006u','i') ORDER BY file_path,element_id,parent_id,element_name,attr_name";
 	String oracleSqlElementsUpdate = "SELECT file_path,element_id,parent_id,element_name,attr_name,attr_value FROM elements ORDER BY file_path,element_id,parent_id,element_name,attr_name";
 	String mysqlSqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (?,?,?,?,?)";
@@ -662,16 +662,16 @@ public class FileExplorerContentFlat {
 	public static void main(String[] args) throws Exception {
 		logger.info("FileExplorer started. : " + new Date());
 		FileExplorerContentFlat fe = new FileExplorerContentFlat();
-		//fe.dbOracle();
-		fe.dbMysql();
+		fe.dbOracle();
+		//fe.dbMysql();
 		//fe.dbHsqldb();
-		fe.walk("D:\\DBS\\project\\src", Charset.forName("UTF-8"));
+		//fe.walk("D:\\DBS\\project\\src", Charset.forName("UTF-8"));
 		//fe.walkStax("C:\\workspace\\DBSB.nTreeWorks\\Web\\xui\\bc\\ACA805L.xfdl");
 		//fe.walkScript("C:\\nTree\\workspace\\DBSB.nTreeWorks\\Web\\xui");
 		//fe.walk("C:\\CONV\\report_0510\\NTREE", Charset.forName("UTF-8"));
 		//fe.walkStax("C:\\xFrame\\project\\DSI\\screen\\NTREE");
-		//fe.walkStaxFlat();
-		//fe.walkStaxFlatUpdate();
+		fe.walkStaxFlat();
+		fe.walkStaxFlatUpdate();
 		//fe.walkHash("C:\\ASIS");
 		//fe.walkScriptSave();
 		logger.info("FileExplorer ended. : " + new Date());
@@ -786,8 +786,8 @@ public class FileExplorerContentFlat {
 		rs = pstmtElements.executeQuery();
 		while(rs.next()) {
 			//System.out.println(cnt++ + " element_name: "+rs.getString("element_name")+ ",attr_name: "+rs.getString("attr_name")+ ",max_length: "+rs.getInt("max_length"));
-			if (rs.getString("attr_name") == null)
-				continue;
+			//if (rs.getString("attr_name") == null)
+			//	continue;
 			
 			if(prev_element_name.equals(rs.getString("element_name"))) {
 					if (rs.getInt("max_length") == 0)
@@ -827,6 +827,7 @@ public class FileExplorerContentFlat {
 					
 					try {
 						//stmt.executeUpdate("drop table "+tableName);
+						System.out.println(sb.toString());
 						stmt.executeUpdate(sb.toString());
 					} catch(SQLException e) {
 						//e.printStackTrace();
