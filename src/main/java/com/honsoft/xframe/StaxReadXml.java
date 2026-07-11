@@ -123,40 +123,50 @@ public class StaxReadXml {
 								control_id = Integer.parseInt(value);
 							}
 							// ","+element.getName()+","+name+","+value);
-							// System.out.println(element.getName() + " , " + depth + " , " + name + " , " +
-							// value);
-							pstmt.setString(1, f.getAbsolutePath());
-							pstmt.setString(2, f.getName());
-							pstmt.setInt(3, depth);
-							pstmt.setString(4, element.getName().getLocalPart());
-							pstmt.setInt(5, cnt);
-							pstmt.setString(6, parent.getParent_name());
-							pstmt.setInt(7, parent.getParent_id());
-							pstmt.setString(8, name.getLocalPart());
-							pstmt.setString(9, value);
-							pstmt.setInt(10, control_id);
-							pstmt.executeUpdate();
+//							 System.out.println(element.getName() + " , " + depth + " , " + name + " , " +
+//							 value);
+							try {
+								pstmt.setString(1, f.getAbsolutePath());
+								pstmt.setString(2, f.getName());
+								pstmt.setInt(3, depth);
+								pstmt.setString(4, element.getName().getLocalPart());
+								pstmt.setInt(5, cnt);
+								pstmt.setString(6, parent.getParent_name());
+								pstmt.setInt(7, parent.getParent_id());
+								pstmt.setString(8, name.getLocalPart());
+								pstmt.setString(9, value);
+								pstmt.setInt(10, control_id);
+								pstmt.executeUpdate();
+							}catch(SQLException e) {
+								System.out.println(f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
+							}
 						} else if ("xlinkdataset".equals(element.getName().getLocalPart()) && "columns".equals(attribute.getName().getLocalPart())){
 							parseDataSetColumns(element,attribute,parent);
 						}
 					}
-				} else {
-					// System.out.println(element.getName() + " , " + depth);
-					pstmt.setString(1, f.getAbsolutePath());
-					pstmt.setString(2, f.getName());
-					pstmt.setInt(3, depth);
-					pstmt.setString(4, element.getName().getLocalPart());
-					pstmt.setInt(5, cnt);
-					pstmt.setString(6, parent.getParent_name());
-					pstmt.setInt(7, parent.getParent_id());
-					pstmt.setString(8, "");
-					pstmt.setString(9, "");
-					pstmt.setInt(10, control_id);
-					pstmt.executeUpdate();
+				} else {  //속성이 없는 element 저장
+					
+//					System.out.println(element.getName() + " , " + depth);
+					try {
+						pstmt.setString(1, f.getAbsolutePath());
+						pstmt.setString(2, f.getName());
+						pstmt.setInt(3, depth);
+						pstmt.setString(4, element.getName().getLocalPart());
+						pstmt.setInt(5, cnt);
+						pstmt.setString(6, parent.getParent_name());
+						pstmt.setInt(7, parent.getParent_id());
+						pstmt.setString(8, "");
+						pstmt.setString(9, "");
+						pstmt.setInt(10, control_id);
+						pstmt.executeUpdate();
+					}catch(SQLException e) {
+						System.out.println(f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
+					}
 				}
 
 			} else if (event.isEndElement()) {
 				depth--;
+				
 			}
 		}
 
