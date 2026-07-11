@@ -123,8 +123,7 @@ public class StaxReadXml {
 								control_id = Integer.parseInt(value);
 							}
 							// ","+element.getName()+","+name+","+value);
-//							 System.out.println(element.getName() + " , " + depth + " , " + name + " , " +
-//							 value);
+//							 System.out.println(element.getName() + " , " + depth + " , " + name + " , " + value);
 							try {
 								pstmt.setString(1, f.getAbsolutePath());
 								pstmt.setString(2, f.getName());
@@ -166,7 +165,7 @@ public class StaxReadXml {
 
 			} else if (event.isEndElement()) {
 				depth--;
-				
+				conn.commit();
 			}
 		}
 
