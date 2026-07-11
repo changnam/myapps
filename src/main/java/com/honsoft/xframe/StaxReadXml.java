@@ -38,18 +38,18 @@ public class StaxReadXml {
 
 	//private String sqlStr = "insert into elements (file_path,file_name,depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value) values(?,?,?,?,?,?,?,?,?)";
 
-	private String db = "jdbc:mysql://localhost:3306/apitest";
-	private String user = "shoppingnt";
-	private String password = "Shoppingnt2021!@";
+	//private String db = "jdbc:mysql://localhost:3306/apitest";
+	//private String user = "shoppingnt";
+	//private String password = "Shoppingnt2021!@";
 	
 	private String sqlStr = "insert into elements (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id) values(?,?,?,?,?,?,?,?,?,?)";
 	private String sqlStrScript = "insert into scripts (file_path,file_name,script_text) values(?,?,?)";
 	private String sqlStrScriptSave = "SELECT CASE substr(file_name,INSTR(file_name,'.',-1)+1) WHEN 'xfdl' THEN REPLACE (file_path,'.xfdl','.js') WHEN 'xjs' THEN REPLACE (file_path,'.xjs','.js') END AS file_path_js,script_text  FROM scripts where script_text is not null ORDER BY file_name";
 	private String sqlStrDataset = "insert into xdatasets(file_path,file_name,ds_name,col_name,col_desc,col_length,col_data,col_callback,col_order) values (?,?,?,?,?,?,?,?,?)";
 
-	// String db = "jdbc:oracle:thin:@localhost:1521:xe";
-	//private String user = "cddba1";
-	//private String password = "cn0012";
+	private String db = "jdbc:oracle:thin:@localhost:1521:xe";
+	private String user = "cddba1";
+	private String password = "cn0012";
 	
 
 	File f;
@@ -61,8 +61,8 @@ public class StaxReadXml {
 
 	public StaxReadXml() {
 		try {
-			Class.forName("com.mysql.cj.jdbc.Driver");
-			//Class.forName("oracle.jdbc.driver.OracleDriver");
+			//Class.forName("com.mysql.cj.jdbc.Driver");
+			Class.forName("oracle.jdbc.driver.OracleDriver");
 
 			conn = DriverManager.getConnection(db, user, password);
 			conn.setAutoCommit(false);
@@ -87,13 +87,15 @@ public class StaxReadXml {
 		this.f = file;
 		eventReader = factory.createXMLEventReader(new FileInputStream(file), charset.toString());
 		depth = 0;
-		int cnt = 0;
+		int cnt = 0; 
+		int control_id = -1;
 		ParentElement[] open_elements = new ParentElement[100];
 		open_elements[0] = new ParentElement("", 0);
 		ParentElement parent = null;
 		while (eventReader.hasNext()) {
 			XMLEvent event = eventReader.nextEvent();
 			if (event.isStartElement()) {
+				control_id = -1;
 				depth++;
 				cnt++;
 				StartElement element = (StartElement) event;
@@ -101,6 +103,8 @@ public class StaxReadXml {
 				open_elements[depth] = new ParentElement(element.getName().getLocalPart(), cnt);
 				// System.out.println("-------------- tag : "+element.getName());
 				Iterator<Attribute> iterator = element.getAttributes();
+				Iterator<Attribute> iteratorForControlId = element.getAttributes();
+				control_id = findControlId(iteratorForControlId);
 				//System.out.println("tag: "+element.getName().getLocalPart());
 				if("Script".equals(element.getName().getLocalPart())){
 					iterator = Collections.emptyIterator();
@@ -115,7 +119,9 @@ public class StaxReadXml {
 							}
 							QName name = attribute.getName();
 							String value = attribute.getValue();
-							// System.out.println(f.getAbsolutePath()+","+f.getName() +
+							if("control_id".equals(name.getLocalPart())) {
+								control_id = Integer.parseInt(value);
+							}
 							// ","+element.getName()+","+name+","+value);
 							// System.out.println(element.getName() + " , " + depth + " , " + name + " , " +
 							// value);
@@ -128,7 +134,7 @@ public class StaxReadXml {
 							pstmt.setInt(7, parent.getParent_id());
 							pstmt.setString(8, name.getLocalPart());
 							pstmt.setString(9, value);
-							pstmt.setInt(10, -1);
+							pstmt.setInt(10, control_id);
 							pstmt.executeUpdate();
 						} else if ("xlinkdataset".equals(element.getName().getLocalPart()) && "columns".equals(attribute.getName().getLocalPart())){
 							parseDataSetColumns(element,attribute,parent);
@@ -145,7 +151,7 @@ public class StaxReadXml {
 					pstmt.setInt(7, parent.getParent_id());
 					pstmt.setString(8, "");
 					pstmt.setString(9, "");
-					pstmt.setInt(10, -1);
+					pstmt.setInt(10, control_id);
 					pstmt.executeUpdate();
 				}
 
@@ -158,6 +164,22 @@ public class StaxReadXml {
 
 	}
 	
+	private int findControlId(Iterator<Attribute> iterator) {
+		int control_id = -1;
+		if (iterator.hasNext()) {
+			while (iterator.hasNext()) {
+				Attribute attribute = iterator.next();
+					QName name = attribute.getName();
+					String value = attribute.getValue();
+					if("control_id".equals(name.getLocalPart())) {
+						control_id = Integer.parseInt(value);
+						break;
+					}
+				}
+		}
+		return control_id;
+	}
+
 	public void parseDataSetColumns(StartElement element,Attribute attribute, ParentElement parent) throws SQLException {
 		String xDataSetName = "";
 		Iterator<Attribute> iterator = element.getAttributes();
