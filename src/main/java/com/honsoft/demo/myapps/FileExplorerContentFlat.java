@@ -34,6 +34,8 @@ import org.slf4j.LoggerFactory;
 import com.honsoft.xframe.StaxExample;
 import com.honsoft.xframe.StaxReadXml;
 
+import ch.qos.logback.core.recovery.ResilientSyslogOutputStream;
+
 public class FileExplorerContentFlat {
 	private static Logger logger = LoggerFactory.getLogger(FileExplorerContentFlat.class);
 	Date startDate, endDate = null;
@@ -681,7 +683,7 @@ public class FileExplorerContentFlat {
 
 	private void walkStaxFlatUpdate() throws SQLException {
 		// TODO Auto-generated method stub
-		int cnt = 0;
+		int cnt = 0, cntFlag = 0;
 		Boolean programStart = true;
 		rs = pstmtElementsUpdate.executeQuery();
 		stmt = conn.createStatement();
@@ -693,9 +695,16 @@ public class FileExplorerContentFlat {
 		int prev_element_id = 0;
 		
 		while(rs.next()) {
+			//System.out.println("cntFlag: "+ ++cntFlag);
+			if (cntFlag == 1283)
+				System.out.println("break point 1");
 			//System.out.println(cnt++ + " insert "+rs.getString("file_path")+","+rs.getInt("element_id")+","+rs.getInt("parent_id")+","+rs.getString("attr_name")+","+rs.getString("attr_value"));
-			if (rs.getString("attr_name") == null)
+			if (rs.getString("attr_name") == null) {
+				if (prev_element_id != rs.getInt("element_id")){
+					prev_element_id = rs.getInt("element_id");
+				}
 				continue;
+			}
 			
 			if(prev_element_id == rs.getInt("element_id")) {
 					sbColumns.append(","+chaneAttrName(rs.getString("attr_name")));
@@ -715,8 +724,8 @@ public class FileExplorerContentFlat {
 					//System.out.println(cnt++ + " 여기서 insert "+sb.toString()+sbColumns.toString()+sbValues.toString());
 					//System.out.println(tableName);
 					try {
-						System.out.println(cnt++ + " 여기서 insert "+sb.toString()+sbColumns.toString()+sbValues.toString());
-					    if (cnt == 944) 
+						//System.out.println(cnt++ + " 여기서 insert "+sb.toString()+sbColumns.toString()+sbValues.toString());
+					    if (cnt == 141) 
 					    	System.out.println("break point");
 						//stmt.executeUpdate("drop table "+tableName);
 						stmt.executeUpdate(sb.toString()+sbColumns.toString()+sbValues.toString());
@@ -748,7 +757,7 @@ public class FileExplorerContentFlat {
 		sbColumns.append(")");
 		sbValues.append("')");
 		try {
-			//stmt.executeUpdate("drop table "+tableName);
+			//System.out.println("@@@@ "+sb.toString()+sbColumns.toString()+sbValues.toString());
 			stmt.executeUpdate(sb.toString()+sbColumns.toString()+sbValues.toString());
 			conn.commit();
 		} catch(SQLException e) {
