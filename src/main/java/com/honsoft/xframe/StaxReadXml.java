@@ -42,8 +42,8 @@ public class StaxReadXml {
 	//private String user = "shoppingnt";
 	//private String password = "Shoppingnt2021!@";
 	
-	private String sqlStr = "insert into elements (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id) values(?,?,?,?,?,?,?,?,?,?)";
-	private String sqlMapinfo = "insert into elements_mapinfo (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id) values(?,?,?,?,?,?,?,?,?,?)";
+	private String sqlStr = "insert into elements (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id,grid_depth) values(?,?,?,?,?,?,?,?,?,?,?)";
+	private String sqlMapinfo = "insert into elements_mapinfo (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id,grid_depth) values(?,?,?,?,?,?,?,?,?,?,?)";
 	private String sqlStrScript = "insert into scripts (file_path,file_name,script_text) values(?,?,?)";
 	private String sqlStrScriptSave = "SELECT CASE substr(file_name,INSTR(file_name,'.',-1)+1) WHEN 'xfdl' THEN REPLACE (file_path,'.xfdl','.js') WHEN 'xjs' THEN REPLACE (file_path,'.xjs','.js') END AS file_path_js,script_text  FROM scripts where script_text is not null ORDER BY file_name";
 	private String sqlStrDataset = "insert into xdatasets(file_path,file_name,ds_name,col_name,col_desc,col_length,col_data,col_callback,col_order) values (?,?,?,?,?,?,?,?,?)";
@@ -90,6 +90,7 @@ public class StaxReadXml {
 		depth = 0;
 		int cnt = 0; 
 		int control_id = -1;
+		int grid_depth = 0;
 		ParentElement[] open_elements = new ParentElement[100];
 		open_elements[0] = new ParentElement("", 0);
 		ParentElement parent = null;
@@ -100,6 +101,29 @@ public class StaxReadXml {
 				depth++;
 				cnt++;
 				StartElement element = (StartElement) event;
+				
+//				if ("grid".equals(element.getName().getLocalPart())) {
+//					System.out.println("grid break");
+//				}
+				
+				if ("column".equals(element.getName().getLocalPart())) {
+					grid_depth++;
+				} else if (!"header".equals(element.getName().getLocalPart()) && !"data".equals(element.getName().getLocalPart())) {
+					grid_depth = 0;
+				}
+				
+//				if ("tab_item".equals(element.getName().getLocalPart())) {
+//					System.out.println("break1");
+//				}
+				
+//				if ("tab".equals(element.getName().getLocalPart())) {
+//					System.out.println("break2");
+//				}
+				
+//				if ("numericex_field".equals(element.getName().getLocalPart())) {
+//					System.out.println("break3");
+//				}
+				
 				parent = open_elements[depth - 1];
 				open_elements[depth] = new ParentElement(element.getName().getLocalPart(), cnt);
 				// System.out.println("-------------- tag : "+element.getName());
@@ -137,6 +161,7 @@ public class StaxReadXml {
 									pstmtMapinfo.setString(8, name.getLocalPart());
 									pstmtMapinfo.setString(9, value);
 									pstmtMapinfo.setInt(10, control_id);
+									pstmtMapinfo.setInt(11, grid_depth);
 									pstmtMapinfo.executeUpdate();
 								}catch(SQLException e) {
 									System.out.println("@@"+f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
@@ -153,6 +178,7 @@ public class StaxReadXml {
 									pstmt.setString(8, name.getLocalPart());
 									pstmt.setString(9, value);
 									pstmt.setInt(10, control_id);
+									pstmt.setInt(11, grid_depth);
 									pstmt.executeUpdate();
 								}catch(SQLException e) {
 									System.out.println("##"+f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
@@ -176,6 +202,7 @@ public class StaxReadXml {
 						pstmt.setString(8, "");
 						pstmt.setString(9, "");
 						pstmt.setInt(10, control_id);
+						pstmt.setInt(11, grid_depth);
 						pstmt.executeUpdate();
 					}catch(SQLException e) {
 						System.out.println(f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
