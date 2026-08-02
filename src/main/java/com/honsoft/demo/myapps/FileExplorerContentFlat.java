@@ -67,7 +67,7 @@ public class FileExplorerContentFlat {
 	PreparedStatement pstmt, pstmtLine, pstmtSymbol, pstmtHeader, pstmtEncoding, pstmtElements, pstmtElementsUpdate;
 	PreparedStatement pstmtScreen, pstmtTranMap, pstmtPushButton;
 	
-	Statement stmt;
+	Statement stmt, stmt2;
 	ResultSet rs;
 
 	String oracleSqlStr = "insert into filecontents (id, file_path, file_name, file_ext, line_num, line_text) values (files_seq.nextval,?,?,?,?,?)";
@@ -694,6 +694,8 @@ public class FileExplorerContentFlat {
 		String prev_file_path = "";
 		int prev_element_id = 0;
 		
+		String noAttrTable = "";
+		
 		while(rs.next()) {
 			//System.out.println("cntFlag: "+ ++cntFlag);
 			if (cntFlag == 1283)
@@ -703,6 +705,15 @@ public class FileExplorerContentFlat {
 				if (prev_element_id != rs.getInt("element_id")){
 					prev_element_id = rs.getInt("element_id");
 				}
+				
+				noAttrTable = "insert into Xf_"+rs.getString("element_name") 
+						+ " (file_path,element_id,parent_id) values('"
+						+ rs.getString("file_path") + "'," + rs.getInt("element_id")
+						+ "," + rs.getInt("parent_id")+")";
+				
+				stmt.executeUpdate(noAttrTable);
+				conn.commit();
+				
 				continue;
 			}
 			
@@ -786,6 +797,7 @@ public class FileExplorerContentFlat {
 	private void walkStaxFlat() throws SQLException {
 		// TODO Auto-generated method stub
 		stmt = conn.createStatement();
+		stmt2 = conn.createStatement();
 		int cnt = 0;
 		Boolean startFlag = true, programStart = true;
 		String prev_element_name = "";
@@ -896,6 +908,21 @@ public class FileExplorerContentFlat {
 		}
 		rs.close();
 		pstmtElements.close();
+		
+		String additionalTable = "SELECT * FROM (SELECT element_name FROM elements GROUP BY element_name) t WHERE element_name NOT IN (SELECT element_name FROM elements WHERE attr_name IS NOT NULL GROUP BY element_name)";
+		rs = stmt.executeQuery(additionalTable);
+
+		while (rs.next()) {
+			try {
+				stmt2.executeUpdate("drop table xf_"+rs.getString("element_name"));
+			}catch(SQLException e) {
+//				System.out.println("drop table "+rs.getString("element_name")+" error ");
+			}
+			stmt2.executeUpdate("create table xf_"+rs.getString("element_name")+" (file_path varchar2(512), element_id number, parent_id number)");
+		}
+		rs.close();
+		stmt.close();
+		stmt2.close();
 		System.out.println("break point");
 	}
 
