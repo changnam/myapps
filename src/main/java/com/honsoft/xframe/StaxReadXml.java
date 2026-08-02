@@ -33,7 +33,7 @@ import javax.xml.stream.events.XMLEvent;
 
 public class StaxReadXml {
 	private Connection conn;
-	private PreparedStatement pstmt, pstmtKeys, pstmtScript, pstmtScriptSave, pstmtDataset;
+	private PreparedStatement pstmt, pstmtKeys, pstmtScript, pstmtScriptSave, pstmtDataset, pstmtMapinfo;
 	private ResultSet rs;
 
 	//private String sqlStr = "insert into elements (file_path,file_name,depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value) values(?,?,?,?,?,?,?,?,?)";
@@ -43,6 +43,7 @@ public class StaxReadXml {
 	//private String password = "Shoppingnt2021!@";
 	
 	private String sqlStr = "insert into elements (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id) values(?,?,?,?,?,?,?,?,?,?)";
+	private String sqlMapinfo = "insert into elements_mapinfo (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id) values(?,?,?,?,?,?,?,?,?,?)";
 	private String sqlStrScript = "insert into scripts (file_path,file_name,script_text) values(?,?,?)";
 	private String sqlStrScriptSave = "SELECT CASE substr(file_name,INSTR(file_name,'.',-1)+1) WHEN 'xfdl' THEN REPLACE (file_path,'.xfdl','.js') WHEN 'xjs' THEN REPLACE (file_path,'.xjs','.js') END AS file_path_js,script_text  FROM scripts where script_text is not null ORDER BY file_name";
 	private String sqlStrDataset = "insert into xdatasets(file_path,file_name,ds_name,col_name,col_desc,col_length,col_data,col_callback,col_order) values (?,?,?,?,?,?,?,?,?)";
@@ -71,7 +72,7 @@ public class StaxReadXml {
 			pstmtScript = conn.prepareStatement(sqlStrScript);
 			pstmtScriptSave = conn.prepareStatement(sqlStrScriptSave);
 			pstmtDataset = conn.prepareStatement(sqlStrDataset);
-			
+			pstmtMapinfo = conn.prepareStatement(sqlMapinfo);
 			factory = XMLInputFactory.newInstance();
 
 		} catch (SQLException e) {
@@ -124,20 +125,38 @@ public class StaxReadXml {
 							}
 							// ","+element.getName()+","+name+","+value);
 //							 System.out.println(element.getName() + " , " + depth + " , " + name + " , " + value);
-							try {
-								pstmt.setString(1, f.getAbsolutePath());
-								pstmt.setString(2, f.getName());
-								pstmt.setInt(3, depth);
-								pstmt.setString(4, element.getName().getLocalPart());
-								pstmt.setInt(5, cnt);
-								pstmt.setString(6, parent.getParent_name());
-								pstmt.setInt(7, parent.getParent_id());
-								pstmt.setString(8, name.getLocalPart());
-								pstmt.setString(9, value);
-								pstmt.setInt(10, control_id);
-								pstmt.executeUpdate();
-							}catch(SQLException e) {
-								System.out.println(f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
+							if ("mapinfo".equals(name.getLocalPart())) {
+								try {
+									pstmtMapinfo.setString(1, f.getAbsolutePath());
+									pstmtMapinfo.setString(2, f.getName());
+									pstmtMapinfo.setInt(3, depth);
+									pstmtMapinfo.setString(4, element.getName().getLocalPart());
+									pstmtMapinfo.setInt(5, cnt);
+									pstmtMapinfo.setString(6, parent.getParent_name());
+									pstmtMapinfo.setInt(7, parent.getParent_id());
+									pstmtMapinfo.setString(8, name.getLocalPart());
+									pstmtMapinfo.setString(9, value);
+									pstmtMapinfo.setInt(10, control_id);
+									pstmtMapinfo.executeUpdate();
+								}catch(SQLException e) {
+									System.out.println("@@"+f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
+								}
+							} else {
+								try {
+									pstmt.setString(1, f.getAbsolutePath());
+									pstmt.setString(2, f.getName());
+									pstmt.setInt(3, depth);
+									pstmt.setString(4, element.getName().getLocalPart());
+									pstmt.setInt(5, cnt);
+									pstmt.setString(6, parent.getParent_name());
+									pstmt.setInt(7, parent.getParent_id());
+									pstmt.setString(8, name.getLocalPart());
+									pstmt.setString(9, value);
+									pstmt.setInt(10, control_id);
+									pstmt.executeUpdate();
+								}catch(SQLException e) {
+									System.out.println("##"+f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
+								}
 							}
 						} else if ("xlinkdataset".equals(element.getName().getLocalPart()) && "columns".equals(attribute.getName().getLocalPart())){
 							parseDataSetColumns(element,attribute,parent);
