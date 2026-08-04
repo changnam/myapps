@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,8 +21,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -666,25 +669,311 @@ public class FileExplorerContent {
 		fe.dbOracle();
 		//fe.dbMysql();
 		//fe.dbHsqldb();
-		fe.walk("C:\\nextapps\\public", Charset.forName("UTF-8"));
-		//fe.walkStax("C:\\working_change");
+		//fe.walk("D:\\DBS\\project\\src", Charset.forName("UTF-8"));
+//		fe.walkStax("C:\\xFrameSJ\\project\\SJRX\\screen\\SYSTEM\\AC");
 		//fe.walkScript("C:\\nTree\\workspace\\DBSB.nTreeWorks\\Web\\xui");
 		//fe.walk("C:\\반입파일\\next-sample\\package.json", Charset.forName("UTF-8"));
 		System.out.println("args length : "+args.length);
 		//if (args.length > 0)
-		//	fe.walkStax(args[0]);
+//			fe.walkStax("C:\\xFrame\\project\\asb\\screen");
 		//else
-		//	fe.walkStax("C:\\xFrame\\project\\DSI\\screen\\NTREE");
+//		fe.walkStax("C:\\xFrame\\project\\asb\\screen\\SBT\\SAMPLE");
 		//fe.walkHash("C:\\ASIS");
 		//fe.walkScriptSave();
+		fe.walkTranMap();
 		logger.info("FileExplorer ended. : " + new Date());
 		logger.info("Total directories: " + fe.dirCnt);
 		logger.info("Total files: " + fe.fileCnt);
 	}
 
+	private void walkTranMap() {
+	    String sqlTranMapDrop = "DROP TABLE elements_tranmap";
+	    String sqlTranMapCreate = "CREATE TABLE elements_tranmap as "
+	            + "SELECT file_path,element_id,max(fcode) fcode,to_number(max(defaultmap)) defaultmap FROM ( "
+	            + "SELECT file_path,element_id,fcode,'' defaultmap FROM (SELECT file_path,element_id,attr_value fcode FROM elements WHERE attr_name = 'fcode') t1 "
+	            + "UNION ALL "
+	            + "SELECT file_path,element_id,'' fcode,defaultmap FROM (SELECT file_path,element_id,attr_value defaultmap FROM elements WHERE attr_name = 'defaultmap') t2 "
+	            + ") GROUP BY file_path,element_id";
+	    String sql = "SELECT a.file_path,a.element_id,a.fcode,a.defaultmap,b.attr_value mapinfo "
+	            + " FROM elements_tranmap a LEFT OUTER JOIN elements_mapinfo b "
+	            + " ON a.FILE_PATH = b.file_path AND a.element_id = b.element_id  ORDER BY a.file_path,a.fcode";
+	    
+	    String sqlInsert = "insert into elements_mapinfo_detail (file_path,element_id,fcode,defaultmap, control_id,attr_value,input_order,output_order,mapinfo_order) values (?,?,?,?,?,?,?,?,?)";
+
+	    try {
+	        stmt = conn.createStatement();
+	    } catch (SQLException e) {
+	        System.out.println("Connection error: " + e.getMessage());
+	        System.exit(1);
+	    }
+
+	    try {
+	        stmt.executeUpdate(sqlTranMapDrop);
+	        System.out.println("elements_tranmap drop success ");
+	    } catch (SQLException e) {
+	        System.out.println("drop error: " + e.getMessage());
+	    }
+
+	    try {
+	        stmt.executeUpdate(sqlTranMapCreate);
+	        System.out.println("elements_tranmap create success ");
+	    } catch (SQLException e) {
+	        System.out.println("create error: " + e.getMessage());
+	        System.exit(1);
+	    }
+
+	    try {
+	        rs = stmt.executeQuery(sql);
+	        pstmt = conn.prepareStatement(sqlInsert);
+	    } catch (SQLException e) {
+	        System.out.println("Connection error: " + e.getMessage());
+	        System.exit(1);
+	    }
+
+	    try {
+	        while (rs.next()) {
+	            int mapinfoOrder = 1;
+	            String filePath = rs.getString("file_path");
+	            int elementId = rs.getInt("element_id");
+	            String fcode = rs.getString("fcode");
+	            int defaultmap = rs.getInt("defaultmap");
+	            String mapinfo = rs.getString("mapinfo");
+//	            mapinfo="8::1:1:/11::2:2:/21:::3:/5::4:4:;O:0:0::1:1::2:2::3:3::4:4::5:5::6:6::7:7::8:8::9:9::10:10::11:11::12:12::13:13::14:14::15:15::16:16::17:17::18:18::19:19:/22:::45:/1::::/2::::/6::::/7::::/12::::/13::::/14::::/15::::/16::::/17::::/18::::/19::::/20::::/"
+//	            mapinfo="8::1:1:/11::2:2:/21::3:3:/5:::4:;:::::1:::2:::3:::4:::5:::6:::7:::8:::9:::10:::11:::12:::13:::14:::15:::16:::17:::18:::19:/22:::45:/1::::/2::::/6::::/7::::/12::::/13::::/14::::/15::::/16::::/17::::/18::::/19::::/20::::/"
+	            if (mapinfo == null || mapinfo.trim().isEmpty()) {
+	                continue;
+	            }
+
+	            String[] mapInfos = mapinfo.split("/");
+
+	            for (String info : mapInfos) {
+	                if (info == null || info.trim().isEmpty()) {
+	                    continue;
+	                }
+
+	                // Split base mapping and grid mapping at ';'
+	                int semiIndex = info.indexOf(';');
+	                String basePart = (semiIndex >= 0) ? info.substring(0, semiIndex) : info;
+	                String gridPart = (semiIndex >= 0) ? info.substring(semiIndex + 1) : null;
+
+	                // Parse base parameters using split
+	                String[] baseTokens = basePart.split(":", -1);
+	                if (baseTokens.length == 0 || baseTokens[0].isEmpty()) {
+	                    continue;
+	                }
+
+	                Integer controlId = Integer.parseInt(baseTokens[0]);
+	                String attrValue = (baseTokens.length > 1 && !baseTokens[1].isEmpty()) ? baseTokens[1] : null;
+	                String inputOrder = (baseTokens.length > 2 && !baseTokens[2].isEmpty()) ? baseTokens[2] : null;
+	                String baseOutput = (baseTokens.length > 3 && !baseTokens[3].isEmpty()) ? baseTokens[3] : null;
+
+	                // 1. Insert Base Mapping Row
+	                try {
+		                pstmt.setString(1, filePath);
+		                pstmt.setInt(2, elementId);
+		                pstmt.setString(3, fcode);
+		                pstmt.setInt(4, defaultmap);
+		                pstmt.setInt(5, controlId);
+		                pstmt.setString(6, attrValue);
+		                pstmt.setString(7, inputOrder);
+		                pstmt.setString(8, baseOutput);
+		                pstmt.setInt(9, mapinfoOrder++);
+		                pstmt.executeUpdate();
+	                }catch(SQLException e) {
+	                	System.out.println("pstmt error 1: " + filePath+",fcode: "+fcode+","+e.getMessage());
+	                }
+	             // Parse Grid Mapping
+	                if (gridPart != null && !gridPart.trim().isEmpty()) {
+
+	                    // keep trailing empty fields
+	                    String[] gridTokens = gridPart.split(":", -1);
+
+	                    // every grid row consists of
+	                    // attribute : input : output
+	                    for (int i = 0; i + 2 < gridTokens.length; i += 3) {
+
+	                        String gridAttr =
+	                                gridTokens[i].isEmpty() ? null : gridTokens[i];
+
+	                        String gridInput =
+	                                gridTokens[i + 1].isEmpty() ? null : gridTokens[i + 1];
+
+	                        String gridOutput =
+	                                gridTokens[i + 2].isEmpty() ? null : gridTokens[i + 2];
+	                        try {
+	                        pstmt.setString(1, filePath);
+	                        pstmt.setInt(2, elementId);
+	                        pstmt.setString(3, fcode);
+	                        pstmt.setInt(4, defaultmap);
+
+	                        // Grid inherits the base control id
+	                        pstmt.setInt(5, controlId);
+
+	                        pstmt.setString(6, gridAttr);
+	                        pstmt.setString(7, gridInput);
+	                        pstmt.setString(8, gridOutput);
+
+	                        pstmt.setInt(9, mapinfoOrder++);
+	                        pstmt.executeUpdate();
+	                        }catch(SQLException e) {
+	                        	System.out.println("pstmt error 2: " + filePath+",fcode: "+fcode+","+e.getMessage());
+	                        }
+	                    }
+	                }
+	            }
+	            conn.commit();
+	        }
+	    } catch (SQLException e) {
+	        System.out.println("pstmt error: " + filePath+","+e.getMessage());
+	    }
+	}
+
+	/**
+	 * Helper method to parse grid tokens safely without relying on a full string split.
+	 */
+	private void parseAndInsertGridItems(
+	        PreparedStatement pstmt, String filePath, int elementId, String fcode, int defaultmap,
+	        Integer controlId, String baseAttr, String baseInput, String baseOutput,
+	        String gridStr, int startOrder) throws SQLException {
+
+	    String[] rawTokens = gridStr.split(":", -1);
+	    
+	    // Trim initial leading empty placeholders if present
+	    int startIdx = 0;
+	    while (startIdx < rawTokens.length && rawTokens[startIdx].isEmpty()) {
+	        startIdx++;
+	    }
+
+	    // Determine grid dialect/structure
+	    // If first item contains explicit attribute (e.g. 'O:0:0') vs standard tokens
+	    for (int i = startIdx; i < rawTokens.length; ) {
+	        String subAttr = null;
+	        String inVal = null;
+	        String outVal = null;
+
+	        // Pattern Check: [Attr:Input:Output] vs [Input:Output] vs [Output]
+	        // Default mapping logic:
+	        if (i + 2 < rawTokens.length && !rawTokens[i].matches("\\d+") && !rawTokens[i].isEmpty()) {
+	            // Type 1: attr : input : output
+	            subAttr = rawTokens[i];
+	            inVal = rawTokens[i + 1];
+	            outVal = rawTokens[i + 2];
+	            i += 3;
+	        } else if (i + 1 < rawTokens.length) {
+	            // Type 2: input : output
+	            inVal = rawTokens[i];
+	            outVal = rawTokens[i + 1];
+	            i += 2;
+	        } else {
+	            // Type 3: output only
+	            outVal = rawTokens[i];
+	            i += 1;
+	        }
+
+	        if ((inVal == null || inVal.isEmpty()) && (outVal == null || outVal.isEmpty())) {
+	            continue;
+	        }
+
+	        String newInput = (inVal != null && !inVal.isEmpty()) 
+	                ? (baseInput != null ? baseInput + "." + inVal : inVal) 
+	                : null;
+
+	        String newOutput = (outVal != null && !outVal.isEmpty()) 
+	                ? (baseOutput != null ? baseOutput + "." + outVal : outVal) 
+	                : null;
+
+	        pstmt.setString(1, filePath);
+	        pstmt.setInt(2, elementId);
+	        pstmt.setString(3, fcode);
+	        pstmt.setInt(4, defaultmap);
+	        pstmt.setInt(5, controlId);
+	        pstmt.setString(6, (subAttr != null && !subAttr.isEmpty()) ? subAttr : baseAttr);
+	        pstmt.setString(7, newInput);
+	        pstmt.setString(8, newOutput);
+	        pstmt.setInt(9, startOrder++);
+	        pstmt.executeUpdate();
+	    }
+	}
+
+	/**
+	 * Counts parsed grid items to keep mapinfo_order aligned.
+	 */
+	private int countGridItems(String gridStr) {
+	    if (gridStr == null || gridStr.isEmpty()) return 0;
+	    String[] tokens = gridStr.split(":", -1);
+	    int count = 0;
+	    for (String token : tokens) {
+	        if (!token.isEmpty()) count++;
+	    }
+	    return Math.max(1, count / 2);
+	}
+
+	private List<GridItem> parseGrid(String grid) {
+
+	    List<GridItem> list = new ArrayList<>();
+
+	    if (grid == null || grid.isEmpty())
+	        return list;
+
+	    GridItem item = new GridItem();
+
+	    StringBuilder token = new StringBuilder();
+
+	    int field = 0;
+
+	    for (int i = 0; i <= grid.length(); i++) {
+
+	        char ch = (i == grid.length()) ? '\0' : grid.charAt(i);
+
+	        if (ch == ':' || ch == '\0') {
+
+	            String value = token.length() == 0 ? null : token.toString();
+	            token.setLength(0);
+
+	            switch (field) {
+	            case 0:
+	                item.attr = value;
+	                break;
+	            case 1:
+	                item.input = value;
+	                break;
+	            case 2:
+	                item.output = value;
+	                break;
+	            }
+
+	            field++;
+
+	            boolean endRecord = false;
+
+	            if (ch == '\0') {
+	                endRecord = true;
+	            }
+	            else if (i + 1 < grid.length() && grid.charAt(i + 1) == ':') {
+	                endRecord = true;
+	                i++;        // consume second ':'
+	            }
+
+	            if (endRecord) {
+
+	                list.add(item);
+
+	                item = new GridItem();
+	                field = 0;
+	            }
+
+	        } else {
+	            token.append(ch);
+	        }
+	    }
+
+	    return list;
+	}
+	
 	private void walkScriptSave() throws XMLStreamException, SQLException, IOException {
 		staxReadXml.parseScriptSave();
 		
 	}
 
 }
+
