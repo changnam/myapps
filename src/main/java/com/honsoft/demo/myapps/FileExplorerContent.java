@@ -24,7 +24,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -66,10 +68,10 @@ public class FileExplorerContent {
 
 	Connection conn;
 	PreparedStatement pstmt, pstmtLine, pstmtSymbol, pstmtHeader, pstmtEncoding;
-	PreparedStatement pstmtScreen, pstmtTranMap, pstmtPushButton;
+	PreparedStatement pstmtScreen, pstmtTranMap, pstmtPushButton, pstmtControl;
 	
 	Statement stmt;
-	ResultSet rs;
+	ResultSet rs, rsControl;
 
 	String oracleSqlStr = "insert into filecontents (id, file_path, file_name, file_ext, line_num, line_text) values (files_seq.nextval,?,?,?,?,?)";
 	String oracleSqlLine = "insert into filecontents(id,file_path, file_name,file_ext, line_num, line_text,work_timestamp) values(files_seq.nextval,?,?,?,?,?,?)";
@@ -81,6 +83,8 @@ public class FileExplorerContent {
 	String mysqlSqlLine = "insert into filecontents(file_path, file_name,line_num, line_text,work_timestamp) values(?,?,?,?,?)";
 	String mysqlEncoding = "insert into fileencodings (file_path, file_name, line_num) values (?,?,?)";
 	
+	String controlStr = "select * from all_elements_info where file_path = ? ";
+	
 	String filePath, fileName, fileExt;
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
 	
@@ -89,6 +93,8 @@ public class FileExplorerContent {
 	
 	BufferedWriter bw;
 
+	Map<Integer,String[]> controlInfo = new HashMap<Integer, String[]>();
+	
 	//StaxExample staxExample = new StaxExample();
 	StaxReadXml staxReadXml = new StaxReadXml();
 	
@@ -102,6 +108,7 @@ public class FileExplorerContent {
 			pstmt = conn.prepareStatement(oracleSqlStr);
 			pstmtLine = conn.prepareStatement(oracleSqlLine);
 			pstmtEncoding = conn.prepareStatement(oracleEncoding);
+			pstmtControl = conn.prepareStatement(controlStr);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -701,7 +708,7 @@ public class FileExplorerContent {
 	            + " FROM elements_tranmap a LEFT OUTER JOIN elements_mapinfo b "
 	            + " ON a.FILE_PATH = b.file_path AND a.element_id = b.element_id  ORDER BY a.file_path,a.fcode";
 	    
-	    String sqlInsert = "insert into elements_mapinfo_detail (file_path,element_id,fcode,defaultmap, control_id,header_horzcount, attr_value,input_order,output_order,mapinfo_order) values (?,?,?,?,?,?,?,?,?,?)";
+	    String sqlInsert = "insert into elements_mapinfo_detail (file_path,element_id,fcode,defaultmap, control_id,control_name,element_name,header_horzcount, attr_value,input_order,output_order,mapinfo_order) values (?,?,?,?,?,?,?,?,?,?,?,?)";
 
 	    try {
 	        stmt = conn.createStatement();
@@ -740,11 +747,17 @@ public class FileExplorerContent {
 	        System.out.println("Connection error: " + e.getMessage());
 	        System.exit(1);
 	    }
-
+	    
+	    int cntFlag = 0;
+	    String prevFilePath = "";
 	    try {
 	        while (rs.next()) {
 	            int mapinfoOrder = 1;
 	            String filePath = rs.getString("file_path");
+	            if (!prevFilePath.equals(filePath)) {
+	            	structControlInfos(filePath);
+	            	prevFilePath = filePath;
+	            }
 	            int elementId = rs.getInt("element_id");
 	            String fcode = rs.getString("fcode");
 	            int defaultmap = rs.getInt("defaultmap");
@@ -778,6 +791,8 @@ public class FileExplorerContent {
 	                    continue;
 	                }
 	                Integer controlId = -1;
+	                String[] controlInfoTemp = null;
+	                String controlName = "";
 	                String headerHorzCount = "";
 	                String attrValue = "";
 	                String inputOrder = "";
@@ -800,6 +815,9 @@ public class FileExplorerContent {
 	                	continue;
 	                	//System.exit(1);
 	                }
+	                
+	                controlInfoTemp = controlInfo.get(controlId);
+	                
 	                // 1. Insert Base Mapping Row
 	                try {
 		                pstmt.setString(1, filePath);
@@ -807,11 +825,13 @@ public class FileExplorerContent {
 		                pstmt.setString(3, fcode);
 		                pstmt.setInt(4, defaultmap);
 		                pstmt.setInt(5, controlId);
-		                pstmt.setString(6, headerHorzCount);
-		                pstmt.setString(7, attrValue);
-		                pstmt.setString(8, inputOrder);
-		                pstmt.setString(9, outputOrder);
-		                pstmt.setInt(10, mapinfoOrder++);
+		                pstmt.setString(6, controlInfoTemp[0]);
+		                pstmt.setString(7, controlInfoTemp[1]);
+		                pstmt.setString(8, headerHorzCount);
+		                pstmt.setString(9, attrValue);
+		                pstmt.setString(10, inputOrder);
+		                pstmt.setString(11, outputOrder);
+		                pstmt.setInt(12, mapinfoOrder++);
 		                pstmt.executeUpdate();
 	                }catch(SQLException e) {
 	                	System.out.println("pstmt error 1: " + filePath+",fcode: "+fcode+","+e.getMessage());
@@ -842,12 +862,14 @@ public class FileExplorerContent {
 
 	                        // Grid inherits the base control id
 	                        pstmt.setInt(5, controlId);
-	                        pstmt.setString(6, null);
-	                        pstmt.setString(7, gridAttr);
-	                        pstmt.setString(8, gridInput);
-	                        pstmt.setString(9, gridOutput);
+	                        pstmt.setString(6, controlInfoTemp[0]);
+			                pstmt.setString(7, controlInfoTemp[1]);
+	                        pstmt.setString(8, null);
+	                        pstmt.setString(9, gridAttr);
+	                        pstmt.setString(10, gridInput);
+	                        pstmt.setString(11, gridOutput);
 
-	                        pstmt.setInt(10, mapinfoOrder++);
+	                        pstmt.setInt(12, mapinfoOrder++);
 	                        pstmt.executeUpdate();
 	                        }catch(SQLException e) {
 	                        	System.out.println("pstmt error 2: " + filePath+",fcode: "+fcode+","+e.getMessage());
@@ -856,12 +878,49 @@ public class FileExplorerContent {
 	                }
 	            }
 	            conn.commit();
-	        }
+	            if (cntFlag++ % 1000 == 0) System.out.println(cntFlag + " tranmaps processed.");
+	        } //end of while
 	    } catch (SQLException e) {
 	        System.out.println("pstmt error: " + filePath+","+e.getMessage());
 	    }
 	}
 
+	private void structControlInfos(String filePath) {
+		try {
+			pstmtControl.setString(1, filePath);
+			rsControl = pstmtControl.executeQuery();
+			while(rsControl.next()) {
+				Integer controlId = rsControl.getInt("control_id");
+				String[] controlInfoTemp = new String[2];
+				
+				controlInfoTemp[0] = rsControl.getString("control_name");
+				controlInfoTemp[1] = rsControl.getString("element_name");
+				
+				controlInfo.put(controlId, controlInfoTemp);
+			}
+		}catch(SQLException e) {
+			System.out.println("control infos error: file_path: "+filePath);
+		}
+	}
+	
+	
+	private String[] findControlInfo(String filePath, Integer controlId) {
+		String[] controlInfo = new String[2];
+		try {
+			pstmtControl.setString(1, filePath);
+			pstmtControl.setInt(2,controlId);
+			rsControl = pstmtControl.executeQuery();
+			while(rsControl.next()) {
+				controlInfo[0] = rsControl.getString("control_name");
+				controlInfo[1] = rsControl.getString("element_name");
+			}
+			rsControl.close();
+		}catch(SQLException e) {
+			System.out.println("control info error: file_path: "+filePath+",control_id: "+controlId+",error: "+e.getMessage());
+		}
+		return controlInfo;
+	}
+	
 	/**
 	 * Helper method to parse grid tokens safely without relying on a full string split.
 	 */
