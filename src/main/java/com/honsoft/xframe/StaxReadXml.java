@@ -182,7 +182,7 @@ public class StaxReadXml {
 									pstmt.executeUpdate();
 								}catch(SQLException e) {
 									System.out.println("##"+f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
-								}
+									System.out.println("## attr_name: "+name.getLocalPart()+",value: "+value);								}
 							}
 						} else if ("xlinkdataset".equals(element.getName().getLocalPart()) && "columns".equals(attribute.getName().getLocalPart())){
 							parseDataSetColumns(element,attribute,parent);
