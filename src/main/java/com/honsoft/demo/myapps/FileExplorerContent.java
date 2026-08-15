@@ -670,7 +670,7 @@ public class FileExplorerContent {
 		//fe.dbMysql();
 		//fe.dbHsqldb();
 		//fe.walk("D:\\DBS\\project\\src", Charset.forName("UTF-8"));
-//		fe.walkStax("C:\\xFrameSJ\\project\\SJRX\\screen\\SYSTEM\\AC");
+//		fe.walkStax("C:\\xFrameSJ\\project\\SJRX\\screen\\SYSTEM");
 		//fe.walkScript("C:\\nTree\\workspace\\DBSB.nTreeWorks\\Web\\xui");
 		//fe.walk("C:\\반입파일\\next-sample\\package.json", Charset.forName("UTF-8"));
 		System.out.println("args length : "+args.length);
@@ -688,17 +688,20 @@ public class FileExplorerContent {
 
 	private void walkTranMap() {
 	    String sqlTranMapDrop = "DROP TABLE elements_tranmap";
+	    String sqlMapInfoDetailTruncate = "Truncate table elements_mapinfo_detail";
 	    String sqlTranMapCreate = "CREATE TABLE elements_tranmap as "
-	            + "SELECT file_path,element_id,max(fcode) fcode,to_number(max(defaultmap)) defaultmap FROM ( "
-	            + "SELECT file_path,element_id,fcode,'' defaultmap FROM (SELECT file_path,element_id,attr_value fcode FROM elements WHERE attr_name = 'fcode') t1 "
+	            + "SELECT file_path,element_id,max(fcode) fcode,to_number(max(defaultmap)) defaultmap,max(maptype) maptype FROM ( "
+	            + "SELECT file_path,element_id,fcode,'' defaultmap,'' maptype FROM (SELECT file_path,element_id,attr_value fcode FROM elements WHERE attr_name = 'fcode') t1 "
 	            + "UNION ALL "
-	            + "SELECT file_path,element_id,'' fcode,defaultmap FROM (SELECT file_path,element_id,attr_value defaultmap FROM elements WHERE attr_name = 'defaultmap') t2 "
+	            + "SELECT file_path,element_id,'' fcode,defaultmap,'' maptype FROM (SELECT file_path,element_id,attr_value defaultmap FROM elements WHERE attr_name = 'defaultmap') t2 "
+	            + "UNION ALL "
+	            + "SELECT file_path,element_id,'' fcode,'' defaultmap,maptype FROM (SELECT file_path,element_id,attr_value maptype FROM elements WHERE attr_name = 'type') t3 "
 	            + ") GROUP BY file_path,element_id";
-	    String sql = "SELECT a.file_path,a.element_id,a.fcode,a.defaultmap,b.attr_value mapinfo "
+	    String sql = "SELECT a.file_path,a.element_id,a.fcode,a.defaultmap,a.maptype,b.attr_value mapinfo "
 	            + " FROM elements_tranmap a LEFT OUTER JOIN elements_mapinfo b "
 	            + " ON a.FILE_PATH = b.file_path AND a.element_id = b.element_id  ORDER BY a.file_path,a.fcode";
 	    
-	    String sqlInsert = "insert into elements_mapinfo_detail (file_path,element_id,fcode,defaultmap, control_id,attr_value,input_order,output_order,mapinfo_order) values (?,?,?,?,?,?,?,?,?)";
+	    String sqlInsert = "insert into elements_mapinfo_detail (file_path,element_id,fcode,defaultmap, control_id,header_horzcount, attr_value,input_order,output_order,mapinfo_order) values (?,?,?,?,?,?,?,?,?,?)";
 
 	    try {
 	        stmt = conn.createStatement();
@@ -723,6 +726,14 @@ public class FileExplorerContent {
 	    }
 
 	    try {
+	        stmt.executeUpdate(sqlMapInfoDetailTruncate);
+	        System.out.println("elements_mapinfo_detail truncate success ");
+	    } catch (SQLException e) {
+	        System.out.println("truncte error: " + e.getMessage());
+	        System.exit(1);
+	    }
+	    
+	    try {
 	        rs = stmt.executeQuery(sql);
 	        pstmt = conn.prepareStatement(sqlInsert);
 	    } catch (SQLException e) {
@@ -738,8 +749,13 @@ public class FileExplorerContent {
 	            String fcode = rs.getString("fcode");
 	            int defaultmap = rs.getInt("defaultmap");
 	            String mapinfo = rs.getString("mapinfo");
+	            String maptype = rs.getString("maptype");
 //	            mapinfo="8::1:1:/11::2:2:/21:::3:/5::4:4:;O:0:0::1:1::2:2::3:3::4:4::5:5::6:6::7:7::8:8::9:9::10:10::11:11::12:12::13:13::14:14::15:15::16:16::17:17::18:18::19:19:/22:::45:/1::::/2::::/6::::/7::::/12::::/13::::/14::::/15::::/16::::/17::::/18::::/19::::/20::::/"
 //	            mapinfo="8::1:1:/11::2:2:/21::3:3:/5:::4:;:::::1:::2:::3:::4:::5:::6:::7:::8:::9:::10:::11:::12:::13:::14:::15:::16:::17:::18:::19:/22:::45:/1::::/2::::/6::::/7::::/12::::/13::::/14::::/15::::/16::::/17::::/18::::/19::::/20::::/"
+	            if ("check".equals(maptype)) {
+	            	continue;
+	            }
+	            
 	            if (mapinfo == null || mapinfo.trim().isEmpty()) {
 	                continue;
 	            }
@@ -761,12 +777,29 @@ public class FileExplorerContent {
 	                if (baseTokens.length == 0 || baseTokens[0].isEmpty()) {
 	                    continue;
 	                }
-
-	                Integer controlId = Integer.parseInt(baseTokens[0]);
-	                String attrValue = (baseTokens.length > 1 && !baseTokens[1].isEmpty()) ? baseTokens[1] : null;
-	                String inputOrder = (baseTokens.length > 2 && !baseTokens[2].isEmpty()) ? baseTokens[2] : null;
-	                String baseOutput = (baseTokens.length > 3 && !baseTokens[3].isEmpty()) ? baseTokens[3] : null;
-
+	                Integer controlId = -1;
+	                String headerHorzCount = "";
+	                String attrValue = "";
+	                String inputOrder = "";
+	                String outputOrder = "";
+	                if (baseTokens.length == 5) {
+	                	controlId = Integer.parseInt(baseTokens[0]);
+	                	attrValue = (baseTokens.length > 1 && !baseTokens[1].isEmpty()) ? baseTokens[1] : null;
+	                	inputOrder = (baseTokens.length > 2 && !baseTokens[2].isEmpty()) ? baseTokens[2] : null;
+	                	outputOrder = (baseTokens.length > 3 && !baseTokens[3].isEmpty()) ? baseTokens[3] : null;
+	                } else if (baseTokens.length == 6) {
+	                	controlId = Integer.parseInt(baseTokens[0]);
+	                	headerHorzCount = (baseTokens.length > 1 && !baseTokens[1].isEmpty()) ? baseTokens[1] : null;
+	                	attrValue = (baseTokens.length > 2 && !baseTokens[1].isEmpty()) ? baseTokens[2] : null;
+	                	inputOrder = (baseTokens.length > 3 && !baseTokens[2].isEmpty()) ? baseTokens[3] : null;
+	                	outputOrder = (baseTokens.length > 4 && !baseTokens[3].isEmpty()) ? baseTokens[4] : null;
+	                } else {
+	                	System.out.println("@@@@@@@@@@ Cannot parse grid component @@@@@@@@@@@@@@@@");
+	                	System.out.println("@@@@"+ filePath+",fcode: "+fcode+",basePart: "+basePart);
+	    	            
+	                	continue;
+	                	//System.exit(1);
+	                }
 	                // 1. Insert Base Mapping Row
 	                try {
 		                pstmt.setString(1, filePath);
@@ -774,10 +807,11 @@ public class FileExplorerContent {
 		                pstmt.setString(3, fcode);
 		                pstmt.setInt(4, defaultmap);
 		                pstmt.setInt(5, controlId);
-		                pstmt.setString(6, attrValue);
-		                pstmt.setString(7, inputOrder);
-		                pstmt.setString(8, baseOutput);
-		                pstmt.setInt(9, mapinfoOrder++);
+		                pstmt.setString(6, headerHorzCount);
+		                pstmt.setString(7, attrValue);
+		                pstmt.setString(8, inputOrder);
+		                pstmt.setString(9, outputOrder);
+		                pstmt.setInt(10, mapinfoOrder++);
 		                pstmt.executeUpdate();
 	                }catch(SQLException e) {
 	                	System.out.println("pstmt error 1: " + filePath+",fcode: "+fcode+","+e.getMessage());
@@ -808,12 +842,12 @@ public class FileExplorerContent {
 
 	                        // Grid inherits the base control id
 	                        pstmt.setInt(5, controlId);
+	                        pstmt.setString(6, null);
+	                        pstmt.setString(7, gridAttr);
+	                        pstmt.setString(8, gridInput);
+	                        pstmt.setString(9, gridOutput);
 
-	                        pstmt.setString(6, gridAttr);
-	                        pstmt.setString(7, gridInput);
-	                        pstmt.setString(8, gridOutput);
-
-	                        pstmt.setInt(9, mapinfoOrder++);
+	                        pstmt.setInt(10, mapinfoOrder++);
 	                        pstmt.executeUpdate();
 	                        }catch(SQLException e) {
 	                        	System.out.println("pstmt error 2: " + filePath+",fcode: "+fcode+","+e.getMessage());
