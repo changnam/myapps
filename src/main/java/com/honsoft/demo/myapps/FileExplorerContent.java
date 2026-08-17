@@ -805,9 +805,9 @@ public class FileExplorerContent {
 	                } else if (baseTokens.length == 6) {
 	                	controlId = Integer.parseInt(baseTokens[0]);
 	                	headerHorzCount = (baseTokens.length > 1 && !baseTokens[1].isEmpty()) ? baseTokens[1] : null;
-	                	attrValue = (baseTokens.length > 2 && !baseTokens[1].isEmpty()) ? baseTokens[2] : null;
-	                	inputOrder = (baseTokens.length > 3 && !baseTokens[2].isEmpty()) ? baseTokens[3] : null;
-	                	outputOrder = (baseTokens.length > 4 && !baseTokens[3].isEmpty()) ? baseTokens[4] : null;
+	                	attrValue = (baseTokens.length > 2 && !baseTokens[2].isEmpty()) ? baseTokens[2] : null;
+	                	inputOrder = (baseTokens.length > 3 && !baseTokens[3].isEmpty()) ? baseTokens[3] : null;
+	                	outputOrder = (baseTokens.length > 4 && !baseTokens[4].isEmpty()) ? baseTokens[4] : null;
 	                } else {
 	                	System.out.println("@@@@@@@@@@ Cannot parse grid component @@@@@@@@@@@@@@@@");
 	                	System.out.println("@@@@"+ filePath+",fcode: "+fcode+",basePart: "+basePart);
