@@ -68,10 +68,10 @@ public class FileExplorerContent {
 
 	Connection conn;
 	PreparedStatement pstmt, pstmtLine, pstmtSymbol, pstmtHeader, pstmtEncoding;
-	PreparedStatement pstmtScreen, pstmtTranMap, pstmtPushButton, pstmtControl;
+	PreparedStatement pstmtScreen, pstmtTranMap, pstmtPushButton, pstmtControl, pstmtGrid;
 	
 	Statement stmt;
-	ResultSet rs, rsControl;
+	ResultSet rs, rsControl, rsGrid;
 
 	String oracleSqlStr = "insert into filecontents (id, file_path, file_name, file_ext, line_num, line_text) values (files_seq.nextval,?,?,?,?,?)";
 	String oracleSqlLine = "insert into filecontents(id,file_path, file_name,file_ext, line_num, line_text,work_timestamp) values(files_seq.nextval,?,?,?,?,?,?)";
@@ -84,6 +84,9 @@ public class FileExplorerContent {
 	String mysqlEncoding = "insert into fileencodings (file_path, file_name, line_num) values (?,?,?)";
 	
 	String controlStr = "select * from all_elements_info where file_path = ? ";
+	String gridStr = "select a.file_path file_path,a.parent_id grid_control_id,a.grid_depth grid_depth,b.attr_value column_name from ( "
+			+ " select * from elements where element_name = 'column' and file_path = ? and parent_id = ?) a left outer join ( "
+			+ " select * from elements where element_name = 'data' and attr_name = 'name' and file_path = ?) b on a.file_path = b.file_path and a.element_id = b.parent_id order by a.file_path,a.parent_id,a.grid_depth";
 	
 	String filePath, fileName, fileExt;
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
@@ -94,6 +97,7 @@ public class FileExplorerContent {
 	BufferedWriter bw;
 
 	Map<Integer,String[]> controlInfo = new HashMap<Integer, String[]>();
+	Map<String,String> columnInfo = new HashMap<String,String>();
 	
 	//StaxExample staxExample = new StaxExample();
 	StaxReadXml staxReadXml = new StaxReadXml();
@@ -109,7 +113,8 @@ public class FileExplorerContent {
 			pstmtLine = conn.prepareStatement(oracleSqlLine);
 			pstmtEncoding = conn.prepareStatement(oracleEncoding);
 			pstmtControl = conn.prepareStatement(controlStr);
-
+			pstmtGrid = conn.prepareStatement(gridStr);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -791,6 +796,7 @@ public class FileExplorerContent {
 	                    continue;
 	                }
 	                Integer controlId = -1;
+	                int columnIndex = 1;
 	                String[] controlInfoTemp = null;
 	                String controlName = "";
 	                String headerHorzCount = "";
@@ -809,7 +815,7 @@ public class FileExplorerContent {
 	                	inputOrder = (baseTokens.length > 3 && !baseTokens[3].isEmpty()) ? baseTokens[3] : null;
 	                	outputOrder = (baseTokens.length > 4 && !baseTokens[4].isEmpty()) ? baseTokens[4] : null;
 	                } else {
-	                	System.out.println("@@@@@@@@@@ Cannot parse grid component @@@@@@@@@@@@@@@@");
+	                	System.out.println("@@@@@@@@@@ Cannot parse grid component @@@@@@@@@@@@@@@@, baseTokens length : "+baseTokens.length);
 	                	System.out.println("@@@@"+ filePath+",fcode: "+fcode+",basePart: "+basePart);
 	    	            
 	                	continue;
@@ -841,7 +847,7 @@ public class FileExplorerContent {
 
 	                    // keep trailing empty fields
 	                    String[] gridTokens = gridPart.split(":", -1);
-
+	                    columnIndex = 1;
 	                    // every grid row consists of
 	                    // attribute : input : output
 	                    for (int i = 0; i + 2 < gridTokens.length; i += 3) {
@@ -862,8 +868,8 @@ public class FileExplorerContent {
 
 	                        // Grid inherits the base control id
 	                        pstmt.setInt(5, controlId);
-	                        pstmt.setString(6, controlInfoTemp[0]);
-			                pstmt.setString(7, controlInfoTemp[1]);
+	                        pstmt.setString(6, controlInfoTemp[0]+"-"+columnIndex+"-"+columnInfo.get(controlId.toString()+"-"+columnIndex++));
+			                pstmt.setString(7, "column");
 	                        pstmt.setString(8, null);
 	                        pstmt.setString(9, gridAttr);
 	                        pstmt.setString(10, gridInput);
@@ -891,12 +897,31 @@ public class FileExplorerContent {
 			rsControl = pstmtControl.executeQuery();
 			while(rsControl.next()) {
 				Integer controlId = rsControl.getInt("control_id");
-				String[] controlInfoTemp = new String[2];
+				String[] controlInfoTemp = new String[3];
 				
 				controlInfoTemp[0] = rsControl.getString("control_name");
 				controlInfoTemp[1] = rsControl.getString("element_name");
+				controlInfoTemp[2] = rsControl.getString("element_id");
 				
 				controlInfo.put(controlId, controlInfoTemp);
+				if("grid".equals(rsControl.getString("element_name")) ||
+						"multilinegrid".equals(rsControl.getString("element_name"))) {
+					try {
+						pstmtGrid.setString(1,filePath);
+						pstmtGrid.setInt(2,Integer.parseInt(rsControl.getString("element_id")));
+						pstmtGrid.setString(3, filePath);
+						
+						rsGrid = pstmtGrid.executeQuery();
+						
+						while(rsGrid.next()) {
+							columnInfo.put(controlId+"-"+rsGrid.getString("grid_depth"),rsGrid.getString("column_name"));
+							
+						}
+					}catch(SQLException e) {
+						System.out.println("grid column info error: file_path: "+filePath + ","+e.getMessage());
+						System.exit(1);
+					}
+				}
 			}
 		}catch(SQLException e) {
 			System.out.println("control infos error: file_path: "+filePath);
