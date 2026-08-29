@@ -682,7 +682,7 @@ public class FileExplorerContent {
 		//fe.dbMysql();
 		//fe.dbHsqldb();
 		//fe.walk("D:\\DBS\\project\\src", Charset.forName("UTF-8"));
-//		fe.walkStax("C:\\xFrameSJ\\project\\SJRX\\screen\\SYSTEM");
+		fe.walkStax("C:\\xFrameSJ\\project\\SJRX\\screen\\SYSTEM\\AC");
 		//fe.walkScript("C:\\nTree\\workspace\\DBSB.nTreeWorks\\Web\\xui");
 		//fe.walk("C:\\반입파일\\next-sample\\package.json", Charset.forName("UTF-8"));
 		System.out.println("args length : "+args.length);
@@ -699,6 +699,14 @@ public class FileExplorerContent {
 	}
 
 	private void walkTranMap() {
+		String sqlAllElementsInfoDrop = "drop table all_elements_info";
+		String sqlAllElementsInfoCreate = "CREATE TABLE all_elements_info AS "
+				+ " SELECT a.*,b.attr_value control_name FROM " 
+				+ "  (SELECT file_path,element_id,element_name,parent_id,parent_name,el_depth,control_id,grid_depth "
+				+ "     FROM elements GROUP BY file_path,element_id,element_name,parent_id,parent_name,el_depth,control_id,grid_depth) a " 
+				+ " LEFT OUTER JOIN "
+				+ "  (SELECT * FROM elements WHERE attr_name = 'name') b " 
+				+ " ON a.file_path = b.file_path AND a.element_id = b.element_id AND a.element_name = b.element_name";
 	    String sqlTranMapDrop = "DROP TABLE elements_tranmap";
 	    String sqlMapInfoDetailTruncate = "Truncate table elements_mapinfo_detail";
 	    String sqlTranMapCreate = "CREATE TABLE elements_tranmap as "
@@ -737,6 +745,21 @@ public class FileExplorerContent {
 	        System.exit(1);
 	    }
 
+	    try {
+	        stmt.executeUpdate(sqlAllElementsInfoDrop);
+	        System.out.println("all_elements_info drop success ");
+	    } catch (SQLException e) {
+	        System.out.println("drop error: " + e.getMessage());
+	    }
+	    
+	    try {
+	        stmt.executeUpdate(sqlAllElementsInfoCreate);
+	        System.out.println("all_elements_info create success ");
+	    } catch (SQLException e) {
+	        System.out.println("create error: " + e.getMessage());
+	        System.exit(1);
+	    }
+	    
 	    try {
 	        stmt.executeUpdate(sqlMapInfoDetailTruncate);
 	        System.out.println("elements_mapinfo_detail truncate success ");
