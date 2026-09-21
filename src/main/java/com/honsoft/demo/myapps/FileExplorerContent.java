@@ -682,7 +682,7 @@ public class FileExplorerContent {
 		//fe.dbMysql();
 		//fe.dbHsqldb();
 		//fe.walk("D:\\DBS\\project\\src", Charset.forName("UTF-8"));
-		fe.walkStax("C:\\xFrameSJ\\project\\SJRX\\screen\\SYSTEM\\AC");
+		fe.walkStax("C:\\xFrame\\project\\asb\\screen\\SBT");
 		//fe.walkScript("C:\\nTree\\workspace\\DBSB.nTreeWorks\\Web\\xui");
 		//fe.walk("C:\\반입파일\\next-sample\\package.json", Charset.forName("UTF-8"));
 		System.out.println("args length : "+args.length);
@@ -928,7 +928,8 @@ public class FileExplorerContent {
 				
 				controlInfo.put(controlId, controlInfoTemp);
 				if("grid".equals(rsControl.getString("element_name")) ||
-						"multilinegrid".equals(rsControl.getString("element_name"))) {
+						"multilinegrid".equals(rsControl.getString("element_name")) ||
+						"treegrid".equals(rsControl.getString("element_name"))) {
 					try {
 						pstmtGrid.setString(1,filePath);
 						pstmtGrid.setInt(2,Integer.parseInt(rsControl.getString("element_id")));
