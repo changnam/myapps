@@ -4,10 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.sql.Connection;
@@ -18,9 +16,6 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLEventReader;
@@ -28,6 +23,7 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.events.Attribute;
+import javax.xml.stream.events.EndElement;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 
@@ -42,7 +38,7 @@ public class StaxReadXml {
 	//private String user = "shoppingnt";
 	//private String password = "Shoppingnt2021!@";
 	
-	private String sqlStr = "insert into elements (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id,grid_depth) values(?,?,?,?,?,?,?,?,?,?,?)";
+	private String sqlStr = "insert into elements (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id,grid_depth,sub_row,grid_name,grid_control_id) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 	private String sqlMapinfo = "insert into elements_mapinfo (file_path,file_name,el_depth,element_name,element_id,parent_name,parent_id,attr_name, attr_value,control_id,grid_depth) values(?,?,?,?,?,?,?,?,?,?,?)";
 	private String sqlStrScript = "insert into scripts (file_path,file_name,script_text) values(?,?,?)";
 	private String sqlStrScriptSave = "SELECT CASE substr(file_name,INSTR(file_name,'.',-1)+1) WHEN 'xfdl' THEN REPLACE (file_path,'.xfdl','.js') WHEN 'xjs' THEN REPLACE (file_path,'.xjs','.js') END AS file_path_js,script_text  FROM scripts where script_text is not null ORDER BY file_name";
@@ -90,7 +86,13 @@ public class StaxReadXml {
 		depth = 0;
 		int cnt = 0; 
 		int control_id = -1;
+		String controlName = "";
 		int grid_depth = 0;
+		int gridControlId = -1;
+		String gridControlName = "";
+		int prevSubrow = -1;
+		int currentSubrow = -1;
+		String gridType = "";
 		ParentElement[] open_elements = new ParentElement[100];
 		open_elements[0] = new ParentElement("", 0);
 		ParentElement parent = null;
@@ -105,12 +107,6 @@ public class StaxReadXml {
 //				if ("grid".equals(element.getName().getLocalPart())) {
 //					System.out.println("grid break");
 //				}
-				
-				if ("column".equals(element.getName().getLocalPart())) {
-					grid_depth++;
-				} else if (!"header".equals(element.getName().getLocalPart()) && !"data".equals(element.getName().getLocalPart())) {
-					grid_depth = 0;
-				}
 				
 //				if ("tab_item".equals(element.getName().getLocalPart())) {
 //					System.out.println("break1");
@@ -130,7 +126,45 @@ public class StaxReadXml {
 				Iterator<Attribute> iterator = element.getAttributes();
 				Iterator<Attribute> iteratorForControlId = element.getAttributes();
 				control_id = findControlId(iteratorForControlId);
+				Iterator<Attribute> iteratorForControlName = element.getAttributes();
+				controlName = findControlName(iteratorForControlName);
 				//System.out.println("tag: "+element.getName().getLocalPart());
+				
+				if ("grid".equals(element.getName().getLocalPart()) || 
+					"multilinegrid".equals(element.getName().getLocalPart()) || 
+					"treegrid".equals(element.getName().getLocalPart()) ) {
+					gridType = element.getName().getLocalPart();
+					gridControlId = control_id;
+					gridControlName = controlName;
+				}
+				
+				if ("column".equals(element.getName().getLocalPart())) {
+					if("multilinegrid".equals(gridType)) {
+						Iterator<Attribute> iteratorColumn = element.getAttributes();
+						while(iteratorColumn.hasNext()) {
+							Attribute attribute = iteratorColumn.next();
+							if("row".equals(attribute.getName().getLocalPart())) {
+								currentSubrow = Integer.parseInt(attribute.getValue());
+								break;
+							}
+						}
+					}
+					if (prevSubrow == -1) {
+						grid_depth++;
+						prevSubrow = currentSubrow = 0;
+					}else if (prevSubrow == currentSubrow) {
+						grid_depth++;
+					}else {
+						grid_depth = 1;
+						prevSubrow = currentSubrow;
+					}
+					
+				} else if (!"header".equals(element.getName().getLocalPart()) && !"data".equals(element.getName().getLocalPart())) {
+					grid_depth = 0;
+					prevSubrow = -1;
+					currentSubrow = -1;
+				}
+				
 				if("Script".equals(element.getName().getLocalPart())){
 					iterator = Collections.emptyIterator();
 				}
@@ -146,7 +180,7 @@ public class StaxReadXml {
 							String value = attribute.getValue();
 							if("control_id".equals(name.getLocalPart())) {
 								control_id = Integer.parseInt(value);
-							}
+							} 
 							// ","+element.getName()+","+name+","+value);
 //							 System.out.println(element.getName() + " , " + depth + " , " + name + " , " + value);
 							if ("mapinfo".equals(name.getLocalPart())) {
@@ -179,6 +213,9 @@ public class StaxReadXml {
 									pstmt.setString(9, value);
 									pstmt.setInt(10, control_id);
 									pstmt.setInt(11, grid_depth);
+									pstmt.setInt(12, currentSubrow);
+									pstmt.setString(13, gridControlName);
+									pstmt.setInt(14, gridControlId);
 									pstmt.executeUpdate();
 								}catch(SQLException e) {
 									System.out.println("##"+f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
@@ -203,6 +240,9 @@ public class StaxReadXml {
 						pstmt.setString(9, "");
 						pstmt.setInt(10, control_id);
 						pstmt.setInt(11, grid_depth);
+						pstmt.setInt(12, currentSubrow);
+						pstmt.setString(13, gridControlName);
+						pstmt.setInt(14, gridControlId);
 						pstmt.executeUpdate();
 					}catch(SQLException e) {
 						System.out.println(f.getAbsoluteFile()+","+element.getName().getLocalPart()+","+control_id+","+e.getMessage());
@@ -210,6 +250,14 @@ public class StaxReadXml {
 				}
 
 			} else if (event.isEndElement()) {
+				EndElement element = (EndElement) event;
+				if ("grid".equals(element.getName().getLocalPart()) || 
+						"multilinegrid".equals(element.getName().getLocalPart()) || 
+						"treegrid".equals(element.getName().getLocalPart()) ) {
+						gridType = "";
+						gridControlId = -1;
+						gridControlName = "";
+				}
 				depth--;
 				conn.commit();
 			}
@@ -235,6 +283,22 @@ public class StaxReadXml {
 		return control_id;
 	}
 
+	private String findControlName(Iterator<Attribute> iterator) {
+		String controlName = "";
+		if (iterator.hasNext()) {
+			while (iterator.hasNext()) {
+				Attribute attribute = iterator.next();
+					QName name = attribute.getName();
+					String value = attribute.getValue();
+					if("name".equals(name.getLocalPart())) {
+						controlName = value;
+						break;
+					}
+				}
+		}
+		return controlName;
+	}
+	
 	public void parseDataSetColumns(StartElement element,Attribute attribute, ParentElement parent) throws SQLException {
 		String xDataSetName = "";
 		Iterator<Attribute> iterator = element.getAttributes();
