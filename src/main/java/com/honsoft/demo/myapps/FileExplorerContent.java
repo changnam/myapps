@@ -84,9 +84,9 @@ public class FileExplorerContent {
 	String mysqlEncoding = "insert into fileencodings (file_path, file_name, line_num) values (?,?,?)";
 	
 	String controlStr = "select * from all_elements_info where file_path = ? ";
-	String gridStr = "select a.file_path file_path,a.parent_id grid_control_id,a.grid_depth grid_depth,b.attr_value column_name from ( "
+	String gridStr = "select a.file_path file_path,a.parent_id grid_control_id,a.grid_depth grid_depth,a.sub_row sub_row,b.attr_value column_name from ( "
 			+ " select * from elements where element_name = 'column' and file_path = ? and parent_id = ?) a left outer join ( "
-			+ " select * from elements where element_name = 'data' and attr_name = 'name' and file_path = ?) b on a.file_path = b.file_path and a.element_id = b.parent_id order by a.file_path,a.parent_id,a.grid_depth";
+			+ " select * from elements where element_name = 'data' and attr_name = 'name' and file_path = ?) b on a.file_path = b.file_path and a.element_id = b.parent_id order by a.file_path,a.parent_id,a.sub_row,a.grid_depth";
 	
 	String filePath, fileName, fileExt;
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
@@ -682,14 +682,14 @@ public class FileExplorerContent {
 		//fe.dbMysql();
 		//fe.dbHsqldb();
 		//fe.walk("D:\\DBS\\project\\src", Charset.forName("UTF-8"));
-		fe.walkStax("C:\\xFrame\\project\\asb\\screen\\SBT");
+//		fe.walkStax("C:\\xFrameSJ\\project\\SJRX\\screen\\SYSTEM\\CD");
 		//fe.walkScript("C:\\nTree\\workspace\\DBSB.nTreeWorks\\Web\\xui");
 		//fe.walk("C:\\반입파일\\next-sample\\package.json", Charset.forName("UTF-8"));
 		System.out.println("args length : "+args.length);
 		//if (args.length > 0)
 //			fe.walkStax("C:\\xFrame\\project\\asb\\screen");
 		//else
-//		fe.walkStax("C:\\xFrame\\project\\asb\\screen\\SBT\\SAMPLE");
+		fe.walkStax("C:\\xFrame\\project\\asb\\screen\\SBT\\SAMPLE");
 		//fe.walkHash("C:\\ASIS");
 		//fe.walkScriptSave();
 		fe.walkTranMap();
@@ -702,8 +702,8 @@ public class FileExplorerContent {
 		String sqlAllElementsInfoDrop = "drop table all_elements_info";
 		String sqlAllElementsInfoCreate = "CREATE TABLE all_elements_info AS "
 				+ " SELECT a.*,b.attr_value control_name FROM " 
-				+ "  (SELECT file_path,element_id,element_name,parent_id,parent_name,el_depth,control_id,grid_depth "
-				+ "     FROM elements GROUP BY file_path,element_id,element_name,parent_id,parent_name,el_depth,control_id,grid_depth) a " 
+				+ "  (SELECT file_path,element_id,element_name,parent_id,parent_name,el_depth,control_id,grid_name,grid_control_id,grid_depth,sub_row "
+				+ "     FROM elements GROUP BY file_path,element_id,element_name,parent_id,parent_name,el_depth,control_id,grid_name,grid_control_id,grid_depth,sub_row) a " 
 				+ " LEFT OUTER JOIN "
 				+ "  (SELECT * FROM elements WHERE attr_name = 'name') b " 
 				+ " ON a.file_path = b.file_path AND a.element_id = b.element_id AND a.element_name = b.element_name";
@@ -917,7 +917,9 @@ public class FileExplorerContent {
 	private void structControlInfos(String filePath) {
 		try {
 			pstmtControl.setString(1, filePath);
+			// file_path, element_id , element_name 등 element_id 하나당 하나의 row
 			rsControl = pstmtControl.executeQuery();
+			int columnIndex = 0;
 			while(rsControl.next()) {
 				Integer controlId = rsControl.getInt("control_id");
 				String[] controlInfoTemp = new String[3];
@@ -935,10 +937,12 @@ public class FileExplorerContent {
 						pstmtGrid.setInt(2,Integer.parseInt(rsControl.getString("element_id")));
 						pstmtGrid.setString(3, filePath);
 						
+						//file_path, grid_control_id, grid_depth, sub_row, column_name
 						rsGrid = pstmtGrid.executeQuery();
-						
+						columnIndex = 1;
 						while(rsGrid.next()) {
-							columnInfo.put(controlId+"-"+rsGrid.getString("grid_depth"),rsGrid.getString("column_name"));
+							//
+							columnInfo.put(controlId+"-"+columnIndex++, rsGrid.getString("grid_depth")+"-"+rsGrid.getString("sub_row")+"-"+rsGrid.getString("column_name"));
 							
 						}
 					}catch(SQLException e) {
