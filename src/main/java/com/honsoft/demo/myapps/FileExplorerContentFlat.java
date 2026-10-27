@@ -701,6 +701,7 @@ public class FileExplorerContentFlat {
 			if (cntFlag == 1283)
 				System.out.println("break point 1");
 			//System.out.println(cnt++ + " insert "+rs.getString("file_path")+","+rs.getInt("element_id")+","+rs.getInt("parent_id")+","+rs.getString("attr_name")+","+rs.getString("attr_value"));
+			//attribute 가 없는 element 가 있음
 			if (rs.getString("attr_name") == null) {
 				if (prev_element_id != rs.getInt("element_id")){
 					prev_element_id = rs.getInt("element_id");
@@ -717,10 +718,11 @@ public class FileExplorerContentFlat {
 				continue;
 			}
 			
-			if(prev_element_id == rs.getInt("element_id")) {
+			if(prev_file_path.equals(rs.getString("file_path")) && prev_element_id == rs.getInt("element_id")) {
 					sbColumns.append(","+chaneAttrName(rs.getString("attr_name")));
 					sbValues.append("','"+replaceSingleQuote(rs.getString("attr_value")));
-			} else {			
+			} else {
+				prev_file_path = rs.getString("file_path");
 				prev_element_id = rs.getInt("element_id");
 				if (programStart) {
 					programStart = false;
