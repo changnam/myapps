@@ -75,7 +75,7 @@ public class FileExplorerContentFlat {
 	String oracleEncoding = "insert into fileencodings (file_path, file_name, line_num) values (?,?,?)";
 	String oracleSqlElements = "SELECT element_name,attr_name,max(LENGTHB(attr_value)) max_length FROM elements where attr_name is not null GROUP BY element_name,attr_name ORDER BY element_name,attr_name";
 	//String oracleSqlElementsUpdate = "SELECT file_path,element_id,parent_id,element_name,attr_name,attr_value FROM elements where regexp_like(file_path,'cmf006u','i') ORDER BY file_path,element_id,parent_id,element_name,attr_name";
-	String oracleSqlElementsUpdate = "SELECT file_path,element_id,parent_id,element_name,attr_name,attr_value FROM elements ORDER BY file_path,element_id,parent_id,element_name,attr_name";
+	String oracleSqlElementsUpdate = "SELECT file_path,element_id,parent_id,element_name,grid_control_id,grid_name,sub_row,grid_depth,attr_name,attr_value FROM elements ORDER BY file_path,element_id,parent_id,element_name,attr_name";
 	String mysqlSqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (?,?,?,?,?)";
 	String h2SqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (?,?,?,?,?)";
 	String hsqldbSqlStr = "insert into filecontents (file_path, file_name, file_ext, line_num, line_text) values (,?,?,?,?,?)";
@@ -708,10 +708,10 @@ public class FileExplorerContentFlat {
 				}
 				
 				noAttrTable = "insert into Xf_"+rs.getString("element_name") 
-						+ " (file_path,element_id,parent_id) values('"
+						+ " (file_path,element_id,parent_id,grid_control_id,grid_name,sub_row,grid_depth) values('"
 						+ rs.getString("file_path") + "'," + rs.getInt("element_id")
-						+ "," + rs.getInt("parent_id")+")";
-				
+						+ "," + rs.getInt("parent_id")+"," + rs.getInt("grid_control_id")+",'" + rs.getString("grid_name")+"'," + rs.getInt("sub_row")+"," + rs.getInt("grid_depth")+")";
+				System.out.println("@@ attribute 없는 테이블 : "+noAttrTable);
 				stmt.executeUpdate(noAttrTable);
 				conn.commit();
 				
@@ -728,8 +728,8 @@ public class FileExplorerContentFlat {
 					programStart = false;
 					//System.out.println("여기서 테이블 생성 "+sb.toString());
 						sb.append("insert into xf_"+rs.getString("element_name")+"(");
-						sbColumns.append("file_path,element_id,parent_id,"+chaneAttrName(rs.getString("attr_name")));
-						sbValues.append(" values('"+rs.getString("file_path")+"',"+rs.getInt("element_id")+","+rs.getInt("parent_id")+",'"+replaceSingleQuote(rs.getString("attr_value")));
+						sbColumns.append("file_path,element_id,parent_id,grid_control_id,grid_name,sub_row,grid_depth,"+chaneAttrName(rs.getString("attr_name")));
+						sbValues.append(" values('"+rs.getString("file_path")+"',"+rs.getInt("element_id")+","+rs.getInt("parent_id")+","+rs.getInt("grid_control_id")+",'"+rs.getString("grid_name")+"',"+rs.getInt("sub_row")+","+rs.getInt("grid_depth")+",'"+replaceSingleQuote(rs.getString("attr_value")));
 					//sb.delete(0, sb.length());
 				}else {
 					sbColumns.append(")");
@@ -741,6 +741,7 @@ public class FileExplorerContentFlat {
 					    if (cnt == 141) 
 					    	System.out.println("break point");
 						//stmt.executeUpdate("drop table "+tableName);
+					    //System.out.println("@@ "+sb.toString()+sbColumns.toString()+sbValues.toString());
 						stmt.executeUpdate(sb.toString()+sbColumns.toString()+sbValues.toString());
 						conn.commit();
 					} catch(SQLException e) {
@@ -759,8 +760,8 @@ public class FileExplorerContentFlat {
 					sbValues.delete(0, sbValues.length());		
 					
 					sb.append("insert into xf_"+rs.getString("element_name")+"(");
-					sbColumns.append("file_path,element_id,parent_id,"+chaneAttrName(rs.getString("attr_name")));
-					sbValues.append(" values('"+rs.getString("file_path")+"',"+rs.getInt("element_id")+","+rs.getInt("parent_id")+",'"+replaceSingleQuote(rs.getString("attr_value")));
+					sbColumns.append("file_path,element_id,parent_id,grid_control_id,grid_name,sub_row,grid_depth,"+chaneAttrName(rs.getString("attr_name")));
+					sbValues.append(" values('"+rs.getString("file_path")+"',"+rs.getInt("element_id")+","+rs.getInt("parent_id")+","+rs.getInt("grid_control_id")+",'"+rs.getString("grid_name")+"',"+rs.getInt("sub_row")+","+rs.getInt("grid_depth")+",'"+replaceSingleQuote(rs.getString("attr_value")));
 					
 					//startFlag = true;
 				}
@@ -920,7 +921,7 @@ public class FileExplorerContentFlat {
 			}catch(SQLException e) {
 //				System.out.println("drop table "+rs.getString("element_name")+" error ");
 			}
-			stmt2.executeUpdate("create table xf_"+rs.getString("element_name")+" (file_path varchar2(512), element_id number, parent_id number)");
+			stmt2.executeUpdate("create table xf_"+rs.getString("element_name")+" (file_path varchar2(512), element_id number, parent_id number, grid_control_id number, grid_name varchar2(512), sub_row number, grid_depth number)");
 		}
 		rs.close();
 		stmt.close();
@@ -930,7 +931,7 @@ public class FileExplorerContentFlat {
 
 	private String defaultColumns() {
 		// TODO Auto-generated method stub
-		return "file_path varchar2(512), element_id number, parent_id number, ";
+		return "file_path varchar2(512), element_id number, parent_id number, grid_control_id number,grid_name varchar2(512), sub_row number, grid_depth number,";
 	}
 
 	private String chaneAttrName(String string) {
